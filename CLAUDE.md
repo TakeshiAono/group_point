@@ -17,9 +17,18 @@ npm run start    # プロダクションサーバー起動
 npm run lint     # ESLint 実行
 ```
 
+```bash
+npm run db:migrate   # マイグレーション実行（開発用）
+npm run db:generate  # Prismaクライアントを再生成
+npm run db:studio    # Prisma Studio（GUI）を起動
+npm run db:push      # スキーマをDBに直接反映（マイグレーションなし）
+```
+
 ## ディレクトリ構成
 
 - `app/` — App Router のルートディレクトリ。`layout.tsx` がルートレイアウト、`page.tsx` がトップページ
+- `lib/prisma.ts` — Prismaクライアントのシングルトン（Next.jsのホットリロード対応）
+- `prisma/schema.prisma` — データベーススキーマ定義
 - `public/` — 静的ファイル
 - `next.config.ts` — Next.js 設定
 
