@@ -27,3 +27,40 @@ npm run lint     # ESLint 実行
 
 - Node.js v20 以上が必要。nvm を使用している場合は `nvm use 20` を実行すること
 - パスエイリアス `@/*` はプロジェクトルートからの絶対パスにマッピングされている
+
+## 開発フロー
+
+ユーザーがissue番号を指定したら、以下の手順で実装する：
+
+1. **masterを最新化**
+   ```bash
+   git checkout master
+   git pull origin master
+   ```
+
+2. **issueの内容を確認**
+   ```bash
+   gh issue view {番号} --repo TakeshiAono/group_point --json title,body,comments
+   ```
+
+3. **フィーチャーブランチを作成**
+   ```bash
+   git checkout -b feature/{issue番号}
+   ```
+
+4. **実装してコミット**
+   ```bash
+   git add {該当ファイル}
+   git commit -m "feat: {内容} (#{issue番号})"
+   ```
+
+5. **pushしてPRを作成**
+   ```bash
+   git push -u origin feature/{issue番号}
+   gh pr create --repo TakeshiAono/group_point --title "..." --base master --head feature/{issue番号} --body "..."
+   ```
+   PRの本文には必ず `Closes #{issue番号}` を含める。
+
+### 注意事項
+- 応答はすべて日本語で行う
+- gh コマンドが認証エラーになる場合は `gh auth login` を実行するようユーザーに案内する
