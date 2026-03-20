@@ -19,17 +19,32 @@ SENSITIVE_PATTERNS=(
   "private_key"
 )
 
+# 実際の値が代入されているケースのみ検知（変数参照・ハッシュ関数等は除外）
 SENSITIVE_CONTENT_PATTERNS=(
-  "password\s*="
-  "secret\s*="
-  "api_key\s*="
-  "access_token\s*="
-  "private_key\s*="
-  "AWS_SECRET"
-  "-----BEGIN.*PRIVATE KEY-----"
+  "password\s*=\s*['\"][^'\"]{4,}"
+  "secret\s*=\s*['\"][^'\"]{4,}"
+  "api_key\s*=\s*['\"][^'\"]{4,}"
+  "access_token\s*=\s*['\"][^'\"]{4,}"
+  "AWS_SECRET\s*=\s*['\"][^'\"]+"
+  "BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY"
 )
 
 echo "🔍 センシティブなファイルをチェック中..."
+
+ask_confirmation() {
+  if [ -t 0 ] && [ -t 1 ]; then
+    echo "本当にpushしますか？ (yes/no)"
+    read -r answer
+    if [ "$answer" != "yes" ]; then
+      echo "❌ pushをキャンセルしました。"
+      exit 1
+    fi
+  else
+    echo "⛔ 非インタラクティブ環境のため自動的にキャンセルしました。"
+    echo "   意図的にpushする場合は --no-verify オプションを使用してください。"
+    exit 1
+  fi
+}
 
 # pushされるコミットの範囲を取得
 while read local_ref local_sha remote_ref remote_sha; do
@@ -50,12 +65,7 @@ while read local_ref local_sha remote_ref remote_sha; do
       echo "⚠️  警告: センシティブなファイルがpushされようとしています！"
       echo "   対象ファイル: $MATCHED"
       echo ""
-      echo "本当にpushしますか？ (yes/no)"
-      read -r answer < /dev/tty
-      if [ "$answer" != "yes" ]; then
-        echo "❌ pushをキャンセルしました。"
-        exit 1
-      fi
+      ask_confirmation
     fi
   done
 
@@ -70,12 +80,7 @@ while read local_ref local_sha remote_ref remote_sha; do
           echo "   ファイル: $file"
           echo "   該当行: $MATCHED"
           echo ""
-          echo "本当にpushしますか？ (yes/no)"
-          read -r answer < /dev/tty
-          if [ "$answer" != "yes" ]; then
-            echo "❌ pushをキャンセルしました。"
-            exit 1
-          fi
+          ask_confirmation
           break
         fi
       done
