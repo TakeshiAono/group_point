@@ -59,9 +59,9 @@ while read local_ref local_sha remote_ref remote_sha; do
     fi
   done
 
-  # ファイル内容チェック
+  # ファイル内容チェック（.githooksは除外）
   for file in $FILES; do
-    if [ -f "$file" ]; then
+    if [ -f "$file" ] && [[ "$file" != .githooks/* ]]; then
       for pattern in "${SENSITIVE_CONTENT_PATTERNS[@]}"; do
         MATCHED=$(git show "$local_sha:$file" 2>/dev/null | grep -iE "$pattern")
         if [ -n "$MATCHED" ]; then
