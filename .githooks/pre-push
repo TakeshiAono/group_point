@@ -1,0 +1,87 @@
+#!/bin/bash
+# センシティブなファイルがリモートにpushされないかチェックする
+
+SENSITIVE_PATTERNS=(
+  "\.env$"
+  "\.env\.local$"
+  "\.env\.production$"
+  "\.env\.development$"
+  "\.pem$"
+  "\.key$"
+  "\.p12$"
+  "\.pfx$"
+  "id_rsa"
+  "id_ecdsa"
+  "id_ed25519"
+  "\.claude/settings\.local\.json$"
+  "secrets\."
+  "credentials\."
+  "private_key"
+)
+
+SENSITIVE_CONTENT_PATTERNS=(
+  "password\s*="
+  "secret\s*="
+  "api_key\s*="
+  "access_token\s*="
+  "private_key\s*="
+  "AWS_SECRET"
+  "-----BEGIN.*PRIVATE KEY-----"
+)
+
+echo "🔍 センシティブなファイルをチェック中..."
+
+# pushされるコミットの範囲を取得
+while read local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    range="$local_sha"
+  else
+    range="$remote_sha..$local_sha"
+  fi
+
+  # 変更されたファイルを取得
+  FILES=$(git diff --name-only "$range" 2>/dev/null)
+
+  # ファイル名チェック
+  for pattern in "${SENSITIVE_PATTERNS[@]}"; do
+    MATCHED=$(echo "$FILES" | grep -E "$pattern")
+    if [ -n "$MATCHED" ]; then
+      echo ""
+      echo "⚠️  警告: センシティブなファイルがpushされようとしています！"
+      echo "   対象ファイル: $MATCHED"
+      echo ""
+      echo "本当にpushしますか？ (yes/no)"
+      read -r answer < /dev/tty
+      if [ "$answer" != "yes" ]; then
+        echo "❌ pushをキャンセルしました。"
+        exit 1
+      fi
+    fi
+  done
+
+  # ファイル内容チェック
+  for file in $FILES; do
+    if [ -f "$file" ]; then
+      for pattern in "${SENSITIVE_CONTENT_PATTERNS[@]}"; do
+        MATCHED=$(git show "$local_sha:$file" 2>/dev/null | grep -iE "$pattern")
+        if [ -n "$MATCHED" ]; then
+          echo ""
+          echo "⚠️  警告: センシティブな内容が含まれている可能性があります！"
+          echo "   ファイル: $file"
+          echo "   該当行: $MATCHED"
+          echo ""
+          echo "本当にpushしますか？ (yes/no)"
+          read -r answer < /dev/tty
+          if [ "$answer" != "yes" ]; then
+            echo "❌ pushをキャンセルしました。"
+            exit 1
+          fi
+          break
+        fi
+      done
+    fi
+  done
+done
+
+echo "✅ チェック完了。センシティブなファイルは検出されませんでした。"
+exit 0
