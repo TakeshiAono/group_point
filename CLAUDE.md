@@ -2,16 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Status
+## プロジェクトの状態
 
-This project is in its initial state. Only a `package-lock.json` exists; no `package.json`, source files, or configuration have been added yet.
+このプロジェクトは初期状態です。`package-lock.json` のみが存在し、`package.json`・ソースコード・各種設定ファイルはまだ追加されていません。
 
-## Setup
+## セットアップ
 
-Once a `package.json` is created, dependencies can be installed with:
+`package.json` が作成されたら、以下のコマンドで依存関係をインストールできます：
 
 ```bash
 npm install
 ```
 
-Update this file as the project evolves to document build, test, and lint commands, and the overall architecture.
+プロジェクトが進んだら、ビルド・テスト・リントのコマンドや全体のアーキテクチャをこのファイルに追記してください。
