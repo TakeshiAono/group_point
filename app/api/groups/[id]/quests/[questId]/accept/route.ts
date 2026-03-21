@@ -36,9 +36,30 @@ export async function POST(_req: Request, { params }: Params) {
     return NextResponse.json({ error: "自分が発行したクエストは受注できません" }, { status: 403 });
   }
 
-  const updated = await prisma.quest.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.quest.update({
+      where: { id: questId },
+      data: { status: "IN_PROGRESS", completerId: member.id },
+    });
+
+    // デフォルトサブクエストを自動作成（受注者にアサイン・全報酬）
+    await tx.$executeRaw`
+      INSERT INTO "SubQuest" (id, "questId", title, status, "pointReward", "assigneeId", "createdAt", "updatedAt")
+      VALUES (
+        gen_random_uuid()::text,
+        ${questId},
+        ${quest.title},
+        'ASSIGNED',
+        ${quest.pointReward},
+        ${member.id},
+        NOW(),
+        NOW()
+      )
+    `;
+  });
+
+  const updated = await prisma.quest.findUnique({
     where: { id: questId },
-    data: { status: "IN_PROGRESS", completerId: member.id },
     include: {
       creator: { include: { user: { select: { id: true, name: true, email: true } } } },
       completer: { include: { user: { select: { id: true, name: true, email: true } } } },
@@ -51,7 +72,7 @@ export async function POST(_req: Request, { params }: Params) {
     },
   });
 
-  const memberName = updated.completer?.user.name ?? updated.completer?.user.email ?? "不明";
+  const memberName = updated?.completer?.user.name ?? updated?.completer?.user.email ?? "不明";
   await addQuestLog({ questId, memberId: member.id, action: "ACCEPTED", detail: `${memberName} がクエストを受注しました` });
 
   return NextResponse.json(updated);
