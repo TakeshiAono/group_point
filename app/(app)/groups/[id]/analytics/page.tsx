@@ -51,43 +51,27 @@ export default function GroupAnalyticsPage() {
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 上部（フィルター非依存）
-  const [basePieAnalytics, setBasePieAnalytics] = useState<AnalyticsData | null>(null);   // 円グラフ用（常に月単位）
-  const [topLineAnalytics, setTopLineAnalytics] = useState<AnalyticsData | null>(null);   // 折れ線グラフ用
-  const [topGranularity, setTopGranularity] = useState<Granularity>("month");
-  const [topBucket, setTopBucket] = useState<string>("current");
-  const [topPieMode, setTopPieMode] = useState<TopPieMode>("points");
-
-  // 下部（フィルター依存）
-  const [filteredPieAnalytics, setFilteredPieAnalytics] = useState<AnalyticsData | null>(null); // 円グラフ用（常に月単位）
-  const [bottomLineAnalytics, setBottomLineAnalytics] = useState<AnalyticsData | null>(null);   // 折れ線グラフ用
-  const [bottomGranularity, setBottomGranularity] = useState<Granularity>("month");
-  const [bottomBucket, setBottomBucket] = useState<string>("current");
-  const [questTypeFilter, setQuestTypeFilter] = useState<Set<"GOVERNMENT" | "MEMBER">>(
-    new Set(["GOVERNMENT", "MEMBER"])
-  );
-
   const STORAGE_KEY = `analytics-filter-${groupId}`;
 
-  // localStorage 復元（初回のみ）
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const s = JSON.parse(raw) as Partial<{
-        topGranularity: Granularity; topBucket: string; topPieMode: TopPieMode;
-        bottomGranularity: Granularity; bottomBucket: string;
-        questTypes: ("GOVERNMENT" | "MEMBER")[];
-      }>;
-      if (s.topGranularity) setTopGranularity(s.topGranularity);
-      if (s.topBucket) setTopBucket(s.topBucket);
-      if (s.topPieMode) setTopPieMode(s.topPieMode);
-      if (s.bottomGranularity) setBottomGranularity(s.bottomGranularity);
-      if (s.bottomBucket) setBottomBucket(s.bottomBucket);
-      if (s.questTypes) setQuestTypeFilter(new Set(s.questTypes));
-    } catch { /* ignore */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  function loadStorage() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}"); } catch { return {}; }
+  }
+
+  // 上部（フィルター非依存）
+  const [basePieAnalytics, setBasePieAnalytics] = useState<AnalyticsData | null>(null);
+  const [topLineAnalytics, setTopLineAnalytics] = useState<AnalyticsData | null>(null);
+  const [topGranularity, setTopGranularity] = useState<Granularity>(() => loadStorage().topGranularity ?? "month");
+  const [topBucket, setTopBucket] = useState<string>(() => loadStorage().topBucket ?? "current");
+  const [topPieMode, setTopPieMode] = useState<TopPieMode>(() => loadStorage().topPieMode ?? "points");
+
+  // 下部（フィルター依存）
+  const [filteredPieAnalytics, setFilteredPieAnalytics] = useState<AnalyticsData | null>(null);
+  const [bottomLineAnalytics, setBottomLineAnalytics] = useState<AnalyticsData | null>(null);
+  const [bottomGranularity, setBottomGranularity] = useState<Granularity>(() => loadStorage().bottomGranularity ?? "month");
+  const [bottomBucket, setBottomBucket] = useState<string>(() => loadStorage().bottomBucket ?? "current");
+  const [questTypeFilter, setQuestTypeFilter] = useState<Set<"GOVERNMENT" | "MEMBER">>(
+    () => new Set(loadStorage().questTypes ?? ["GOVERNMENT", "MEMBER"])
+  );
 
   // localStorage 保存
   useEffect(() => {
