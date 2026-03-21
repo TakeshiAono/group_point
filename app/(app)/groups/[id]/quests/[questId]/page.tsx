@@ -69,6 +69,8 @@ export default function QuestDetailPage() {
   const [myMember, setMyMember] = useState<GroupMember | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [completing, setCompleting] = useState(false);
+  const [completeError, setCompleteError] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -95,8 +97,28 @@ export default function QuestDetailPage() {
   const canManageSubQuest =
     myMember && (quest.creator.id === myMember.id || quest.completer?.id === myMember.id);
 
+  const canComplete =
+    myMember && quest.completer?.id === myMember.id && quest.status === "IN_PROGRESS";
+
   const isOverdue = quest.deadline && quest.status !== "COMPLETED" && quest.status !== "CANCELLED"
     && new Date(quest.deadline) < new Date();
+
+  async function handleComplete() {
+    if (!confirm("このクエストを完了しますか？アサイン済みのサブクエスト担当者にポイントが支払われます。")) return;
+    setCompleting(true);
+    setCompleteError("");
+    try {
+      const res = await fetch(`/api/groups/${groupId}/quests/${questId}/complete`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setCompleteError(data.error ?? "完了処理に失敗しました");
+        return;
+      }
+      setQuest(data);
+    } finally {
+      setCompleting(false);
+    }
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10 space-y-6">
@@ -155,6 +177,23 @@ export default function QuestDetailPage() {
             </dd>
           </div>
         </dl>
+
+        {/* 完了ボタン */}
+        {canComplete && (
+          <div className="border-t border-gray-100 pt-4">
+            {completeError && <p className="text-xs text-red-600 mb-2">{completeError}</p>}
+            <button
+              onClick={handleComplete}
+              disabled={completing}
+              className="w-full py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
+            >
+              {completing ? "完了処理中..." : "クエストを完了する"}
+            </button>
+            <p className="text-xs text-gray-400 mt-1.5 text-center">
+              アサイン済みのサブクエスト担当者にポイントが支払われます
+            </p>
+          </div>
+        )}
       </div>
 
       {/* サブクエスト */}
