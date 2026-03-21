@@ -46,6 +46,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           >
             プロフィール
           </Link>
+          <Link
+            href="/contact"
+            className="text-sm text-gray-600 hover:text-blue-600 transition"
+          >
+            お問い合わせ
+          </Link>
           <form action={logout}>
             <button
               type="submit"
