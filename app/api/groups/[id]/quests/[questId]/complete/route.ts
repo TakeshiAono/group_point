@@ -92,10 +92,10 @@ export async function POST(_req: Request, { params }: Params) {
       const elapsed = now.getTime() - createdAt.getTime();
       const elapsedPercent = (elapsed / totalDuration) * 100;
 
-      // グループのボーナスルールを取得
+      // クエストのボーナスルールを取得
       const rules = await prisma.$queryRaw<
         { id: string; thresholdPercent: number; bonusRate: number }[]
-      >`SELECT id, "thresholdPercent", "bonusRate" FROM "BonusRule" WHERE "groupId" = ${groupId} ORDER BY "thresholdPercent" ASC`;
+      >`SELECT id, "thresholdPercent", "bonusRate" FROM "BonusRule" WHERE "questId" = ${questId} ORDER BY "thresholdPercent" ASC`;
 
       // 早期完了ボーナス: elapsed% <= threshold の中で最も低いthreshold（最高の達成）
       const bonusRules = rules.filter((r) => r.bonusRate > 0 && elapsedPercent <= r.thresholdPercent);

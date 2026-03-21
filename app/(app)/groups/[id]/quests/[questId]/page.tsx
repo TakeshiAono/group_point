@@ -314,6 +314,133 @@ export default function QuestDetailPage() {
           />
         )}
       </div>
+
+      {/* ボーナス・ペナルティルール */}
+      {canManageSubQuest && quest.deadline && (
+        <BonusRulesSection groupId={groupId} questId={questId} />
+      )}
+    </div>
+  );
+}
+
+type BonusRule = { id: string; thresholdPercent: number; bonusRate: number };
+
+function BonusRulesSection({ groupId, questId }: { groupId: string; questId: string }) {
+  const [rules, setRules] = useState<BonusRule[]>([]);
+  const [threshold, setThreshold] = useState<number | "">("");
+  const [rate, setRate] = useState<number | "">("");
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch(`/api/groups/${groupId}/quests/${questId}/bonus-rules`)
+      .then((r) => r.ok ? r.json() : [])
+      .then(setRules);
+  }, [groupId, questId]);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (threshold === "" || rate === "") return;
+    setError("");
+    setAdding(true);
+    try {
+      const res = await fetch(`/api/groups/${groupId}/quests/${questId}/bonus-rules`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ thresholdPercent: Number(threshold), bonusRate: Number(rate) }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "エラーが発生しました"); return; }
+      setRules((prev) => [...prev, data].sort((a, b) => a.thresholdPercent - b.thresholdPercent));
+      setThreshold("");
+      setRate("");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleDelete(ruleId: string) {
+    const res = await fetch(`/api/groups/${groupId}/quests/${questId}/bonus-rules/${ruleId}`, { method: "DELETE" });
+    if (res.ok) setRules((prev) => prev.filter((r) => r.id !== ruleId));
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
+      <div>
+        <h3 className="font-semibold text-gray-800">ボーナス・ペナルティルール</h3>
+        <p className="text-xs text-gray-400 mt-0.5">
+          作成日〜納期の期間を100%として、達成タイミングに応じたボーナス/ペナルティを設定します。
+        </p>
+      </div>
+
+      {rules.length === 0 ? (
+        <p className="text-sm text-gray-400">ルールが登録されていません</p>
+      ) : (
+        <ul className="space-y-2">
+          {rules.map((r) => (
+            <li key={r.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2 text-sm">
+              <div className="flex items-center gap-3">
+                <span className="text-gray-600">
+                  期間の <span className="font-bold text-gray-800">{r.thresholdPercent}%</span>{" "}
+                  {r.bonusRate > 0 ? "以内に完了" : "以降に完了"}
+                </span>
+                <span className={`font-bold ${r.bonusRate > 0 ? "text-green-600" : "text-red-500"}`}>
+                  {r.bonusRate > 0 ? `+${r.bonusRate}%` : `${r.bonusRate}%`}
+                </span>
+              </div>
+              <button
+                onClick={() => handleDelete(r.id)}
+                className="text-xs text-red-400 hover:text-red-600 transition"
+              >
+                削除
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form onSubmit={handleAdd} className="border-t border-gray-100 pt-4 space-y-3">
+        <p className="text-xs font-medium text-gray-600">ルールを追加</p>
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">
+              しきい値（%）<span className="ml-1 text-gray-400">80=早期、110=10%遅延</span>
+            </p>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={threshold}
+              onChange={(e) => setThreshold(e.target.value === "" ? "" : Number(e.target.value))}
+              placeholder="例: 80"
+              className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              required
+            />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-1">
+              ボーナス率（%）<span className="ml-1 text-gray-400">正=ボーナス、負=ペナルティ</span>
+            </p>
+            <input
+              type="number"
+              step={0.1}
+              value={rate}
+              onChange={(e) => setRate(e.target.value === "" ? "" : Number(e.target.value))}
+              placeholder="例: 10 or -10"
+              className="w-36 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={adding}
+            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+          >
+            {adding ? "追加中..." : "追加"}
+          </button>
+        </div>
+        {error && <p className="text-xs text-red-600">{error}</p>}
+      </form>
     </div>
   );
 }
