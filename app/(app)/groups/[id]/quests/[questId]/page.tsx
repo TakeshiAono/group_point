@@ -75,6 +75,7 @@ export default function QuestDetailPage() {
   const [error, setError] = useState("");
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState("");
+  const [appliedBonus, setAppliedBonus] = useState<{ thresholdPercent: number; bonusRate: number } | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState("");
 
@@ -140,6 +141,7 @@ export default function QuestDetailPage() {
         return;
       }
       setQuest(data);
+      if (data.appliedBonus) setAppliedBonus(data.appliedBonus);
     } finally {
       setCompleting(false);
     }
@@ -231,6 +233,15 @@ export default function QuestDetailPage() {
             <p className="text-xs text-gray-400 mt-1.5 text-center">
               アサイン済みのサブクエスト担当者にポイントが支払われます
             </p>
+          </div>
+        )}
+
+        {/* ボーナス/ペナルティ適用通知 */}
+        {appliedBonus && (
+          <div className={`border-t border-gray-100 pt-4 rounded-lg px-4 py-3 text-sm ${appliedBonus.bonusRate > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+            {appliedBonus.bonusRate > 0
+              ? `🎉 期間の ${appliedBonus.thresholdPercent}% 以内に完了！ボーナス +${appliedBonus.bonusRate}% が適用されました`
+              : `⚠️ 期間の ${appliedBonus.thresholdPercent}% 経過後の完了。ペナルティ ${appliedBonus.bonusRate}% が適用されました`}
           </div>
         )}
       </div>

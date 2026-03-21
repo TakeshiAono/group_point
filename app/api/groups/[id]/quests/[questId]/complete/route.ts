@@ -79,6 +79,39 @@ export async function POST(_req: Request, { params }: Params) {
 
   const assignedSubQuests = quest.subQuests.filter((sq) => sq.status === "ASSIGNED");
 
+  // ボーナスルールを適用（納期が設定されている場合のみ）
+  let bonusRate = 0;
+  let appliedRule: { thresholdPercent: number; bonusRate: number } | null = null;
+  if (quest.deadline) {
+    const now = new Date();
+    const createdAt = quest.createdAt;
+    const deadline = quest.deadline;
+    const totalDuration = deadline.getTime() - createdAt.getTime();
+
+    if (totalDuration > 0) {
+      const elapsed = now.getTime() - createdAt.getTime();
+      const elapsedPercent = (elapsed / totalDuration) * 100;
+
+      // グループのボーナスルールを取得
+      const rules = await prisma.$queryRaw<
+        { id: string; thresholdPercent: number; bonusRate: number }[]
+      >`SELECT id, "thresholdPercent", "bonusRate" FROM "BonusRule" WHERE "groupId" = ${groupId} ORDER BY "thresholdPercent" ASC`;
+
+      // 早期完了ボーナス: elapsed% <= threshold の中で最も低いthreshold（最高の達成）
+      const bonusRules = rules.filter((r) => r.bonusRate > 0 && elapsedPercent <= r.thresholdPercent);
+      // 遅延ペナルティ: elapsed% >= threshold の中で最も高いthreshold（最も遅れた段階）
+      const penaltyRules = rules.filter((r) => r.bonusRate < 0 && elapsedPercent >= r.thresholdPercent);
+
+      if (bonusRules.length > 0) {
+        appliedRule = bonusRules[0]; // 最低threshold = 最高ボーナス
+        bonusRate = appliedRule.bonusRate;
+      } else if (penaltyRules.length > 0) {
+        appliedRule = penaltyRules[penaltyRules.length - 1]; // 最高threshold = 最も具体的なペナルティ
+        bonusRate = appliedRule.bonusRate;
+      }
+    }
+  }
+
   // トランザクションで一括処理
   await prisma.$transaction(async (tx) => {
     // クエストを完了に変更
@@ -87,12 +120,13 @@ export async function POST(_req: Request, { params }: Params) {
       data: { status: "COMPLETED" },
     });
 
-    // アサイン済みサブクエストの担当者にポイントを付与（報酬はサブクエスト経由のみ）
+    // アサイン済みサブクエストの担当者にポイントを付与（ボーナス/ペナルティ込み）
     for (const sq of assignedSubQuests) {
       if (sq.assigneeId && sq.pointReward > 0) {
+        const bonus = Math.round(sq.pointReward * bonusRate / 100);
         await tx.groupMember.update({
           where: { id: sq.assigneeId },
-          data: { memberPoints: { increment: sq.pointReward } },
+          data: { memberPoints: { increment: sq.pointReward + bonus } },
         });
       }
       // サブクエストも完了に変更
@@ -117,5 +151,10 @@ export async function POST(_req: Request, { params }: Params) {
     },
   });
 
-  return NextResponse.json(updated);
+  return NextResponse.json({
+    ...updated,
+    appliedBonus: appliedRule
+      ? { thresholdPercent: appliedRule.thresholdPercent, bonusRate: appliedRule.bonusRate }
+      : null,
+  });
 }

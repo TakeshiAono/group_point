@@ -44,6 +44,24 @@ model Group {
   members           GroupMember[]
   quests            Quest[]
   invitations       Invitation[]
+  bonusRules        BonusRule[]
+}
+
+/// 早期/遅延完了ボーナス・ペナルティルール
+/// thresholdPercent: 作成日〜納期の期間に対する完了タイミングの割合(%)
+///   例: 80 → 期間の80%以内に完了でボーナス対象
+///       110 → 期間の110%（納期の10%超過）でペナルティ対象
+/// bonusRate: 報酬に対するボーナス/ペナルティ率(%)。正=ボーナス、負=ペナルティ
+model BonusRule {
+  id               String   @id @default(cuid())
+  groupId          String
+  thresholdPercent Float
+  bonusRate        Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  group            Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
 }
 
 /// グループとユーザーの中間テーブル。ロールとメンバーポイント残高を保持。
