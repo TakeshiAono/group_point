@@ -203,13 +203,19 @@ export default function GroupDetailPage() {
     <div>
       <main className="max-w-4xl mx-auto px-6 py-10 space-y-8">
         <section>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-2xl font-bold text-gray-800">{group.name}</h2>
             {myRole !== "MEMBER" && (
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_BADGE[myRole]}`}>
                 {ROLE_LABEL[myRole]}
               </span>
             )}
+            <Link
+              href={`/groups/${id}/analytics`}
+              className="ml-auto text-xs px-3 py-1.5 border border-gray-300 rounded-full text-gray-600 hover:border-blue-400 hover:text-blue-600 transition"
+            >
+              分析
+            </Link>
           </div>
         </section>
 
