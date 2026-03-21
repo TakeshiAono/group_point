@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { formatPoint, unitLabel, type PointGroup } from "@/lib/pointFormat";
+
+const DEFAULT_POINT_GROUP: PointGroup = { pointUnit: "pt", laborCostPerHour: 0, timeUnit: "HOUR" };
 
 type QuestUser = { id: string; name: string | null; email: string };
 type QuestMember = { id: string; user: QuestUser };
@@ -80,6 +83,7 @@ export default function QuestDetailPage() {
   const [quest, setQuest] = useState<Quest | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [myMember, setMyMember] = useState<GroupMember | null>(null);
+  const [pointGroup, setPointGroup] = useState<PointGroup>(DEFAULT_POINT_GROUP);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [completing, setCompleting] = useState(false);
@@ -107,8 +111,9 @@ export default function QuestDetailPage() {
       .then(([questData, me, groups, proposals]) => {
         setQuest(questData);
         if (me?.id && Array.isArray(groups)) {
-          const group = groups.find((g: { id: string; members: GroupMember[] }) => g.id === groupId);
+          const group = groups.find((g: { id: string; members: GroupMember[]; pointUnit: string; laborCostPerHour: number; timeUnit: string }) => g.id === groupId);
           setMembers(group?.members ?? []);
+          if (group) setPointGroup({ pointUnit: group.pointUnit, laborCostPerHour: group.laborCostPerHour, timeUnit: group.timeUnit });
           const m = group?.members.find((m: GroupMember) => m.user.id === me.id);
           if (m) setMyMember(m);
         }
@@ -249,13 +254,13 @@ export default function QuestDetailPage() {
         <div className="flex items-center gap-4 py-3 border-t border-gray-100">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">報酬</span>
-            <span className="text-2xl font-bold text-blue-600">{quest.pointReward} pt</span>
+            <span className="text-2xl font-bold text-blue-600">{formatPoint(quest.pointReward, pointGroup)}</span>
           </div>
           {quest.status === "COMPLETED" && quest.actualPaidPoints !== null && (
             <div className="flex items-center gap-1.5">
               <span className="text-sm text-gray-400">実際の支払</span>
               <span className={`text-lg font-bold ${quest.actualPaidPoints > quest.pointReward ? "text-green-600" : quest.actualPaidPoints < quest.pointReward ? "text-red-500" : "text-blue-600"}`}>
-                {quest.actualPaidPoints} pt
+                {formatPoint(quest.actualPaidPoints, pointGroup)}
               </span>
             </div>
           )}
@@ -365,10 +370,10 @@ export default function QuestDetailPage() {
             <span className="text-xs text-gray-500">
               報酬合計:{" "}
               <span className="font-bold text-blue-600">
-                {quest.subQuests.reduce((s, sq) => s + sq.pointReward, 0)} pt
+                {formatPoint(quest.subQuests.reduce((s, sq) => s + sq.pointReward, 0), pointGroup)}
               </span>
               {" / "}
-              {quest.pointReward} pt
+              {formatPoint(quest.pointReward, pointGroup)}
             </span>
           )}
         </div>
@@ -401,7 +406,7 @@ export default function QuestDetailPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {sq.pointReward > 0 && (
-                        <span className="text-sm font-bold text-blue-600">{sq.pointReward} pt</span>
+                        <span className="text-sm font-bold text-blue-600">{formatPoint(sq.pointReward, pointGroup)}</span>
                       )}
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SUB_STATUS_COLOR[sq.status]}`}>
                         {SUB_STATUS_LABEL[sq.status]}
@@ -422,6 +427,7 @@ export default function QuestDetailPage() {
             myMemberId={myMember?.id ?? ""}
             questPointReward={quest.pointReward}
             usedPointReward={quest.subQuests.reduce((s, sq) => s + sq.pointReward, 0)}
+            pointGroup={pointGroup}
             onAdded={(sq) => setQuest((prev) => prev ? { ...prev, subQuests: [...prev.subQuests, sq] } : prev)}
           />
         )}
@@ -579,6 +585,7 @@ function AddSubQuestForm({
   myMemberId,
   questPointReward,
   usedPointReward,
+  pointGroup,
   onAdded,
 }: {
   groupId: string;
@@ -587,6 +594,7 @@ function AddSubQuestForm({
   myMemberId: string;
   questPointReward: number;
   usedPointReward: number;
+  pointGroup: PointGroup;
   onAdded: (sq: SubQuest) => void;
 }) {
   const [title, setTitle] = useState("");
@@ -607,7 +615,7 @@ function AddSubQuestForm({
     e.preventDefault();
     setError("");
     if (resolvedPt > remaining) {
-      setError(`報酬が残り上限（${remaining} pt）を超えています`);
+      setError(`報酬が残り上限（${formatPoint(remaining, pointGroup)}）を超えています`);
       return;
     }
     setSubmitting(true);
@@ -667,7 +675,7 @@ function AddSubQuestForm({
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="text-xs text-gray-500">
-            報酬（残り {remaining} pt）
+            報酬（残り {formatPoint(remaining, pointGroup)}）
           </label>
           <div className="flex gap-2">
             {(["pt", "percent"] as const).map((m) => (
@@ -677,7 +685,7 @@ function AddSubQuestForm({
                   checked={rewardMode === m}
                   onChange={() => { setRewardMode(m); setPointReward(0); setPercent(0); }}
                 />
-                {m === "pt" ? "pt" : "%"}
+                {m === "pt" ? unitLabel(pointGroup) : "%"}
               </label>
             ))}
           </div>
@@ -702,7 +710,7 @@ function AddSubQuestForm({
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
             <span className="text-sm text-gray-500 shrink-0">%</span>
-            <span className="text-xs text-gray-400 shrink-0">= {ptFromPercent} pt</span>
+            <span className="text-xs text-gray-400 shrink-0">= {formatPoint(ptFromPercent, pointGroup)}</span>
           </div>
         )}
       </div>
@@ -838,7 +846,7 @@ function EditQuestForm({
         />
       </div>
       <div>
-        <label className="block text-xs text-gray-500 mb-1">報酬（pt）</label>
+        <label className="block text-xs text-gray-500 mb-1">報酬</label>
         <input
           type="number"
           value={pointReward}

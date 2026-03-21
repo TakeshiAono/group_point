@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { formatPoint, unitLabel, type PointGroup } from "@/lib/pointFormat";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 
@@ -43,12 +44,16 @@ const STATUS_COLOR: Record<Quest["status"], string> = {
   CANCELLED: "bg-red-100 text-red-500",
 };
 
+const DEFAULT_POINT_GROUP: PointGroup = { pointUnit: "pt", laborCostPerHour: 0, timeUnit: "HOUR" };
+
 export default function QuestsPage() {
   const { id: groupId } = useParams<{ id: string }>();
   const [quests, setQuests] = useState<Quest[]>([]);
   const [myMember, setMyMember] = useState<GroupMember | null>(null);
-  const [tab, setTab] = useState<"GOVERNMENT" | "MEMBER">("GOVERNMENT");
+  const [pointGroup, setPointGroup] = useState<PointGroup>(DEFAULT_POINT_GROUP);
   const [showForm, setShowForm] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"ALL" | Quest["status"]>("IN_PROGRESS");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "GOVERNMENT" | "MEMBER">("ALL");
 
   useEffect(() => {
     Promise.all([
@@ -58,16 +63,17 @@ export default function QuestsPage() {
     ]).then(([questData, me, groups]) => {
       if (Array.isArray(questData)) setQuests(questData);
       if (me?.id && Array.isArray(groups)) {
-        const group = groups.find((g: { id: string; members: GroupMember[] }) => g.id === groupId);
-        const member = group?.members.find((m: GroupMember) => m.user.id === me.id);
-        if (member) setMyMember(member);
+        const group = groups.find((g: { id: string; members: GroupMember[]; pointUnit: string; laborCostPerHour: number; timeUnit: string }) => g.id === groupId);
+        if (group) {
+          setPointGroup({ pointUnit: group.pointUnit, laborCostPerHour: group.laborCostPerHour, timeUnit: group.timeUnit });
+          const member = group.members.find((m: GroupMember) => m.user.id === me.id);
+          if (member) setMyMember(member);
+        }
       }
     });
   }, [groupId]);
 
   const canCreateGov = myMember?.role === "ADMIN" || myMember?.role === "LEADER";
-  const [statusFilter, setStatusFilter] = useState<"ALL" | Quest["status"]>("IN_PROGRESS");
-  const [typeFilter, setTypeFilter] = useState<"ALL" | "GOVERNMENT" | "MEMBER">("ALL");
 
   const filtered = quests.filter(
     (q) =>
@@ -122,7 +128,7 @@ export default function QuestsPage() {
         {/* 保有ポイント表示 */}
         {myMember && (
           <p className="text-sm text-gray-500">
-            あなたの保有ポイント: <strong className="text-gray-800">{myMember.memberPoints} pt</strong>
+            あなたの保有ポイント: <strong className="text-gray-800">{formatPoint(myMember.memberPoints, pointGroup)}</strong>
           </p>
         )}
 
@@ -132,6 +138,7 @@ export default function QuestsPage() {
             groupId={groupId}
             canCreateGov={canCreateGov}
             myPoints={myMember.memberPoints}
+            pointGroup={pointGroup}
             onCreated={(q) => {
               setQuests((prev) => [q, ...prev]);
               setShowForm(false);
@@ -149,7 +156,7 @@ export default function QuestsPage() {
           <p className="text-gray-400 text-sm py-8 text-center">該当するクエストがありません</p>
         ) : (
           <ul className="space-y-2">
-            {filtered.map((q) => <QuestCard key={q.id} quest={q} groupId={groupId} />)}
+            {filtered.map((q) => <QuestCard key={q.id} quest={q} groupId={groupId} pointGroup={pointGroup} />)}
           </ul>
         )}
       </main>
@@ -157,7 +164,7 @@ export default function QuestsPage() {
   );
 }
 
-function QuestCard({ quest, groupId }: { quest: Quest; groupId: string }) {
+function QuestCard({ quest, groupId, pointGroup }: { quest: Quest; groupId: string; pointGroup: PointGroup }) {
   const isOverdue = quest.deadline && quest.status !== "COMPLETED" && quest.status !== "CANCELLED"
     && new Date(quest.deadline) < new Date();
 
@@ -184,7 +191,7 @@ function QuestCard({ quest, groupId }: { quest: Quest; groupId: string }) {
           </div>
           <p className="text-sm font-medium text-gray-800 truncate">{quest.title}</p>
         </div>
-        <p className="text-base font-bold text-blue-600 shrink-0">{quest.pointReward} pt</p>
+        <p className="text-base font-bold text-blue-600 shrink-0">{formatPoint(quest.pointReward, pointGroup)}</p>
       </Link>
     </li>
   );
@@ -194,12 +201,14 @@ function CreateQuestForm({
   groupId,
   canCreateGov,
   myPoints,
+  pointGroup,
   onCreated,
   onCancel,
 }: {
   groupId: string;
   canCreateGov: boolean;
   myPoints: number;
+  pointGroup: PointGroup;
   onCreated: (q: Quest) => void;
   onCancel: () => void;
 }) {
@@ -212,6 +221,8 @@ function CreateQuestForm({
   const [deadline, setDeadline] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const label = unitLabel(pointGroup);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -264,7 +275,7 @@ function CreateQuestForm({
 
       {questType === "MEMBER" && (
         <p className="text-xs text-gray-400">
-          ※ 報酬は作成時にあなたの保有ポイント（{myPoints} pt）から引き落とされます
+          ※ 報酬は作成時にあなたの保有ポイント（{formatPoint(myPoints, pointGroup)}）から引き落とされます
         </p>
       )}
 
@@ -295,7 +306,7 @@ function CreateQuestForm({
             className="w-32 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             required
           />
-          <span className="text-sm text-gray-500">pt</span>
+          <span className="text-sm text-gray-500">{label}</span>
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">デッドライン（任意）</label>
