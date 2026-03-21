@@ -1,6 +1,7 @@
 import { auth, signOut } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import InvitationList from "./InvitationList";
 
 export default async function HomePage() {
   const session = await auth();
@@ -42,6 +43,7 @@ export default async function HomePage() {
           </h2>
           <p className="text-gray-500">ログインに成功しました。</p>
         </div>
+
         <nav className="flex gap-4">
           <Link
             href="/groups"
@@ -50,6 +52,8 @@ export default async function HomePage() {
             グループ管理
           </Link>
         </nav>
+
+        <InvitationList />
       </main>
     </div>
   );

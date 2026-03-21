@@ -19,9 +19,10 @@ model User {
   image         String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  accounts      Account[]
-  sessions      Session[]
-  groupMembers  GroupMember[]
+  accounts           Account[]
+  sessions           Session[]
+  groupMembers       GroupMember[]
+  receivedInvitations Invitation[]
 }
 
 // ─── グループ ───────────────────────────────────────────────
@@ -36,6 +37,7 @@ model Group {
   updatedAt         DateTime      @updatedAt
   members           GroupMember[]
   quests            Quest[]
+  invitations       Invitation[]
 }
 
 /// グループとユーザーの中間テーブル。ロールとメンバーポイント残高を保持。
@@ -50,8 +52,9 @@ model GroupMember {
   updatedAt    DateTime    @updatedAt
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   group        Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  createdQuests  Quest[]   @relation("QuestCreator")
-  completedQuests Quest[]  @relation("QuestCompleter")
+  createdQuests   Quest[]      @relation("QuestCreator")
+  completedQuests Quest[]      @relation("QuestCompleter")
+  sentInvitations Invitation[]
 
   @@unique([userId, groupId])
 }
@@ -95,6 +98,35 @@ enum QuestStatus {
   IN_PROGRESS // 進行中
   COMPLETED   // 完了
   CANCELLED   // キャンセル
+}
+
+// ─── 招待 ────────────────────────────────────────────────────
+
+/// グループへの招待。LEADERが送り、招待されたユーザーが承認/拒否する。
+model Invitation {
+  id        String           @id @default(cuid())
+  groupId   String
+  /// 招待を送ったGroupMember.id（LEADER）
+  inviterId String
+  /// 招待されたUser.id
+  inviteeId String
+  /// 付与予定のロール
+  role      GroupRole        @default(MEMBER)
+  status    InvitationStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  group     Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  inviter   GroupMember      @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee   User             @relation(fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  /// 同じグループへの重複招待を防ぐ
+  @@unique([groupId, inviteeId])
+}
+
+enum InvitationStatus {
+  PENDING   // 未回答
+  ACCEPTED  // 承認済み
+  DECLINED  // 拒否済み
 }
 
 model Account {
