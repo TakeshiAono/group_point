@@ -71,6 +71,8 @@ export default function QuestDetailPage() {
   const [error, setError] = useState("");
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState("");
+  const [accepting, setAccepting] = useState(false);
+  const [acceptError, setAcceptError] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -97,11 +99,30 @@ export default function QuestDetailPage() {
   const canManageSubQuest =
     myMember && (quest.creator.id === myMember.id || quest.completer?.id === myMember.id);
 
+  const canAccept =
+    myMember && quest.status === "OPEN" && quest.creator.id !== myMember.id;
+
   const canComplete =
     myMember && quest.completer?.id === myMember.id && quest.status === "IN_PROGRESS";
 
   const isOverdue = quest.deadline && quest.status !== "COMPLETED" && quest.status !== "CANCELLED"
     && new Date(quest.deadline) < new Date();
+
+  async function handleAccept() {
+    setAccepting(true);
+    setAcceptError("");
+    try {
+      const res = await fetch(`/api/groups/${groupId}/quests/${questId}/accept`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setAcceptError(data.error ?? "受注に失敗しました");
+        return;
+      }
+      setQuest(data);
+    } finally {
+      setAccepting(false);
+    }
+  }
 
   async function handleComplete() {
     if (!confirm("このクエストを完了しますか？アサイン済みのサブクエスト担当者にポイントが支払われます。")) return;
@@ -177,6 +198,20 @@ export default function QuestDetailPage() {
             </dd>
           </div>
         </dl>
+
+        {/* 受注ボタン */}
+        {canAccept && (
+          <div className="border-t border-gray-100 pt-4">
+            {acceptError && <p className="text-xs text-red-600 mb-2">{acceptError}</p>}
+            <button
+              onClick={handleAccept}
+              disabled={accepting}
+              className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+            >
+              {accepting ? "受注中..." : "このクエストを受注する"}
+            </button>
+          </div>
+        )}
 
         {/* 完了ボタン */}
         {canComplete && (
