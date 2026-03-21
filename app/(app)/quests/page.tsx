@@ -92,25 +92,27 @@ export default function MyQuestsPage() {
             </div>
             <ul className="space-y-2">
               {g.quests.map((q) => (
-                <li
-                  key={q.id}
-                  className="bg-white border border-gray-200 rounded-xl px-5 py-3 flex items-center justify-between gap-4"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[q.status]}`}>
-                        {STATUS_LABEL[q.status]}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {q.questType === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
-                      </span>
+                <li key={q.id}>
+                  <Link
+                    href={`/groups/${g.id}/quests/${q.id}`}
+                    className="flex items-center justify-between gap-4 bg-white border border-gray-200 rounded-xl px-5 py-3 hover:shadow-md transition"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[q.status]}`}>
+                          {STATUS_LABEL[q.status]}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {q.questType === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-800 truncate">{q.title}</p>
+                      {q.description && (
+                        <p className="text-xs text-gray-400 truncate mt-0.5">{q.description}</p>
+                      )}
                     </div>
-                    <p className="text-sm font-medium text-gray-800 truncate">{q.title}</p>
-                    {q.description && (
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{q.description}</p>
-                    )}
-                  </div>
-                  <p className="text-base font-bold text-blue-600 shrink-0">{q.pointReward} pt</p>
+                    <p className="text-base font-bold text-blue-600 shrink-0">{q.pointReward} pt</p>
+                  </Link>
                 </li>
               ))}
             </ul>
