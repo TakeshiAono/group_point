@@ -366,7 +366,10 @@ function AnalysisSection({
 }) {
   const [topN, setTopN] = useState<"all" | 3 | 5 | 10>("all");
   const limit = topN === "all" ? pieData.length : topN;
-  const displayedPie = pieData.slice(0, limit);
+  const topSlice = pieData.slice(0, limit);
+  const selfInTop = !myMemberId || topSlice.some((e) => e.id === myMemberId);
+  const selfEntry = !selfInTop ? pieData.find((e) => e.id === myMemberId) : null;
+  const displayedPie = selfEntry ? [...topSlice, selfEntry] : topSlice;
   const displayedIds = new Set(displayedPie.map((e) => e.id));
   const displayedLineMembers = lineMembers.filter((m) => displayedIds.has(m.memberId));
   const displayedLineRows = lineRows.map((row) => {
