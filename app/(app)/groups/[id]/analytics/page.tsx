@@ -49,10 +49,7 @@ export default function GroupAnalyticsPage() {
   const { id: groupId } = useParams<{ id: string }>();
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // フィルター非依存データ（保有ポイント・提案数用）
   const [baseAnalytics, setBaseAnalytics] = useState<AnalyticsData | null>(null);
-  // フィルター依存データ（完了数用）
   const [filteredAnalytics, setFilteredAnalytics] = useState<AnalyticsData | null>(null);
 
   const STORAGE_KEY = `analytics-filter-${groupId}`;
@@ -90,13 +87,11 @@ export default function GroupAnalyticsPage() {
     });
   }
 
-  // 変更をlocalStorageに保存
   useEffect(() => {
     saveStorage({ topPieMode, selectedMonth, questTypes: Array.from(questTypeFilter) });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topPieMode, selectedMonth, questTypeFilter]);
 
-  // グループ情報 + フィルター非依存analytics（初回のみ）
   useEffect(() => {
     Promise.all([
       fetch("/api/groups").then((r) => r.ok ? r.json() : []),
@@ -117,7 +112,6 @@ export default function GroupAnalyticsPage() {
     }).finally(() => setLoading(false));
   }, [groupId]);
 
-  // フィルター依存analytics（questTypeFilter変更のたびに再フェッチ）
   useEffect(() => {
     const questTypes = Array.from(questTypeFilter).join(",");
     fetch(`/api/groups/${groupId}/analytics?questTypes=${questTypes}`)
@@ -132,13 +126,12 @@ export default function GroupAnalyticsPage() {
 
   const pg: PointGroup = { pointUnit: group.pointUnit, laborCostPerHour: group.laborCostPerHour, timeUnit: group.timeUnit };
 
-  // ── 全月一覧（ベースデータから） ───────────────────────────
   const allMonths = Array.from(new Set([
     ...(baseAnalytics?.questTimeseries.map((x) => x.month) ?? []),
     ...(baseAnalytics?.proposalTimeseries.map((x) => x.month) ?? []),
   ])).sort();
 
-  // ── 上部円グラフデータ（フィルター非依存） ─────────────────
+  // ── 上部円グラフデータ ─────────────────────────────────────
   type PieEntry = { id: string; name: string; value: number; label: string };
 
   let topPieData: PieEntry[] = [];
@@ -161,7 +154,35 @@ export default function GroupAnalyticsPage() {
     }
   }
 
-  // ── 下部円グラフデータ（フィルター依存） ───────────────────
+  // ── 上部折れ線データ ───────────────────────────────────────
+  type LineRow = Record<string, string | number>;
+
+  function buildLineRows<T extends { month: string }>(
+    histories: MemberHistory<T>[],
+    getValue: (h: T) => number
+  ): LineRow[] {
+    if (histories.length === 0 || histories[0].history.length === 0) return [];
+    return histories[0].history.map((h) => {
+      const row: LineRow = { month: h.month };
+      histories.forEach((mp) => {
+        const found = mp.history.find((x) => x.month === h.month);
+        row[mp.name] = found ? getValue(found) : 0;
+      });
+      return row;
+    });
+  }
+
+  const topLineRows = baseAnalytics
+    ? topPieMode === "points"
+      ? buildLineRows(baseAnalytics.memberPointHistory, (h) => (h as { month: string; balance: number }).balance)
+      : buildLineRows(baseAnalytics.memberProposalHistory, (h) => (h as { month: string; count: number }).count)
+    : [];
+
+  const topLineMembers = baseAnalytics
+    ? (topPieMode === "points" ? baseAnalytics.memberPointHistory : baseAnalytics.memberProposalHistory)
+    : [];
+
+  // ── 下部円グラフデータ ─────────────────────────────────────
   let completionPieData: PieEntry[] = [];
   if (filteredAnalytics) {
     completionPieData = filteredAnalytics.memberCompletionHistory
@@ -173,6 +194,25 @@ export default function GroupAnalyticsPage() {
       .sort((a, b) => b.value - a.value);
   }
 
+  // ── 下部折れ線データ ───────────────────────────────────────
+  const completionLineRows = filteredAnalytics
+    ? buildLineRows(filteredAnalytics.memberCompletionHistory, (h) => (h as { month: string; count: number }).count)
+    : [];
+
+  const completionLineMembers = filteredAnalytics?.memberCompletionHistory ?? [];
+
+  const monthSelector = (
+    <select
+      value={selectedMonth}
+      onChange={(e) => setSelectedMonth(e.target.value)}
+      className="ml-auto text-xs border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+    >
+      {[...allMonths].reverse().map((m) => (
+        <option key={m} value={m}>{m}</option>
+      ))}
+    </select>
+  );
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
       {/* ヘッダー */}
@@ -183,8 +223,8 @@ export default function GroupAnalyticsPage() {
         <h2 className="text-2xl font-bold text-gray-800">グループ分析</h2>
       </div>
 
-      {/* ── 上部：クエスト種別に依存しない円グラフ ── */}
-      <PieSection
+      {/* 上部：フィルター非依存 */}
+      <AnalysisSection
         title={topPieMode === "points" ? "保有ポイント" : "提案数"}
         toggleButtons={
           <div className="flex gap-1.5">
@@ -203,22 +243,15 @@ export default function GroupAnalyticsPage() {
             ))}
           </div>
         }
-        monthSelector={
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="ml-auto text-xs border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            {[...allMonths].reverse().map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        }
+        monthSelector={monthSelector}
         pieData={topPieData}
-        formatValue={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
+        formatPieValue={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
+        lineRows={topLineRows}
+        lineMembers={topLineMembers}
+        formatLineTooltip={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
       />
 
-      {/* ── クエスト種別フィルター ── */}
+      {/* クエスト種別フィルター */}
       <div className="flex items-center gap-4 bg-white border border-blue-100 rounded-xl px-5 py-3">
         <span className="text-xs text-gray-500 shrink-0">クエスト種別フィルター</span>
         {(["GOVERNMENT", "MEMBER"] as const).map((type) => (
@@ -235,85 +268,54 @@ export default function GroupAnalyticsPage() {
         <span className="text-xs text-gray-400 ml-auto">↓ 以下のグラフに反映</span>
       </div>
 
-      {/* ── 下部：クエスト種別フィルター依存の円グラフ ── */}
-      <PieSection
+      {/* 下部：フィルター依存 */}
+      <AnalysisSection
         title="クエスト完了数"
-        monthSelector={
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="ml-auto text-xs border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            {[...allMonths].reverse().map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        }
+        monthSelector={monthSelector}
         pieData={completionPieData}
-        formatValue={(v) => `${v} 件`}
+        formatPieValue={(v) => `${v} 件`}
+        lineRows={completionLineRows}
+        lineMembers={completionLineMembers}
+        formatLineTooltip={(v) => `${v} 件`}
       />
-
-      {/* 各人の保有ポイント推移 */}
-      {baseAnalytics && baseAnalytics.memberPointHistory.length > 0 && baseAnalytics.memberPointHistory[0].history.length > 1 && (
-        <div className="space-y-3">
-          <SubTitle>保有ポイント推移（個人別）</SubTitle>
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={baseAnalytics.memberPointHistory[0].history.map((h) => {
-                const row: Record<string, string | number> = { month: h.month };
-                baseAnalytics.memberPointHistory.forEach((mp) => {
-                  const found = mp.history.find((x) => x.month === h.month);
-                  row[mp.name] = found?.balance ?? 0;
-                });
-                return row;
-              })}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                {baseAnalytics.memberPointHistory.map((mp, i) => (
-                  <Line
-                    key={mp.memberId}
-                    type="monotone"
-                    dataKey={mp.name}
-                    stroke={MEMBER_COLORS[i % MEMBER_COLORS.length]}
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 // ─── 共通コンポーネント ──────────────────────────────────────
 type PieEntry = { id: string; name: string; value: number; label: string };
+type LineRow = Record<string, string | number>;
+type LineMember = { memberId: string; name: string };
 
-function PieSection({
+function AnalysisSection({
   title,
   toggleButtons,
   monthSelector,
   pieData,
-  formatValue,
+  formatPieValue,
+  lineRows,
+  lineMembers,
+  formatLineTooltip,
 }: {
   title: string;
   toggleButtons?: React.ReactNode;
   monthSelector?: React.ReactNode;
   pieData: PieEntry[];
-  formatValue: (v: number | string) => string;
+  formatPieValue: (v: number | string) => string;
+  lineRows: LineRow[];
+  lineMembers: LineMember[];
+  formatLineTooltip: (v: number | string) => string;
 }) {
   return (
     <div className="space-y-3">
+      {/* タイトル行 */}
       <div className="flex items-center gap-3 flex-wrap">
         <SubTitle>{title}</SubTitle>
         {toggleButtons}
         {monthSelector}
       </div>
+
+      {/* 円グラフ */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-6">
         {pieData.length === 0 ? (
           <p className="text-sm text-gray-400 py-8 text-center w-full">該当データなし</p>
@@ -336,7 +338,7 @@ function PieSection({
                     <Cell key={entry.id} fill={MEMBER_COLORS[i % MEMBER_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v, name) => [formatValue(v as number), name]} />
+                <Tooltip formatter={(v, name) => [formatPieValue(v as number), name]} />
               </PieChart>
             </ResponsiveContainer>
             <ul className="space-y-2 flex-1 min-w-0">
@@ -351,6 +353,31 @@ function PieSection({
           </>
         )}
       </div>
+
+      {/* 折れ線グラフ */}
+      {lineRows.length > 1 && lineMembers.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={lineRows}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v, name) => [formatLineTooltip(v as number), name]} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              {lineMembers.map((mp, i) => (
+                <Line
+                  key={mp.memberId}
+                  type="monotone"
+                  dataKey={mp.name}
+                  stroke={MEMBER_COLORS[i % MEMBER_COLORS.length]}
+                  strokeWidth={2}
+                  dot={false}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
