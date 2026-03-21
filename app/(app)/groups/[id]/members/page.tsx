@@ -35,7 +35,7 @@ function formatPoint(points: number, group: Pick<Group, "pointUnit" | "laborCost
     const value = (points / group.laborCostPerHour) * (TIME_UNIT_MULTIPLIER[group.timeUnit] ?? 1);
     return `${value.toLocaleString("ja-JP")} ${TIME_UNIT_LABEL[group.timeUnit]}`;
   }
-  return `${points} pt`;
+  return `${points.toLocaleString("ja-JP")} pt`;
 }
 
 const ROLE_LABEL: Record<Role, string> = {
