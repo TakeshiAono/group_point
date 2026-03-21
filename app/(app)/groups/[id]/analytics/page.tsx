@@ -71,9 +71,27 @@ export default function GroupAnalyticsPage() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pieMode, setPieMode] = useState<PieMode>("points");
-  const [selectedMonth, setSelectedMonth] = useState<string>("current");
-  const [questTypeFilter, setQuestTypeFilter] = useState<Set<"GOVERNMENT" | "MEMBER">>(new Set(["GOVERNMENT", "MEMBER"]));
+  const STORAGE_KEY = `analytics-filter-${groupId}`;
+
+  function loadStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw) as { pieMode: PieMode; selectedMonth: string; questTypes: ("GOVERNMENT" | "MEMBER")[] };
+    } catch { return null; }
+  }
+
+  function saveStorage(data: { pieMode: PieMode; selectedMonth: string; questTypes: ("GOVERNMENT" | "MEMBER")[] }) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* ignore */ }
+  }
+
+  const saved = typeof window !== "undefined" ? loadStorage() : null;
+
+  const [pieMode, setPieMode] = useState<PieMode>(saved?.pieMode ?? "points");
+  const [selectedMonth, setSelectedMonth] = useState<string>(saved?.selectedMonth ?? "current");
+  const [questTypeFilter, setQuestTypeFilter] = useState<Set<"GOVERNMENT" | "MEMBER">>(
+    new Set(saved?.questTypes ?? ["GOVERNMENT", "MEMBER"])
+  );
 
   function toggleQuestType(type: "GOVERNMENT" | "MEMBER") {
     setQuestTypeFilter((prev) => {
@@ -87,6 +105,12 @@ export default function GroupAnalyticsPage() {
       return next;
     });
   }
+
+  // 変更をlocalStorageに保存
+  useEffect(() => {
+    saveStorage({ pieMode, selectedMonth, questTypes: Array.from(questTypeFilter) });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pieMode, selectedMonth, questTypeFilter]);
 
   useEffect(() => {
     Promise.all([
