@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function parseJson(res: Response): Promise<any> {
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
+}
+
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 
 type ProposalUser = { id: string; name: string | null; email: string };
@@ -185,7 +191,7 @@ function ProposalCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pointReward: approvePoints }),
       });
-      const data = await res.json();
+      const data = await parseJson(res);
       if (!res.ok) {
         setError(data.error ?? "エラーが発生しました");
         return;
@@ -205,7 +211,7 @@ function ProposalCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rejectReason }),
       });
-      const data = await res.json();
+      const data = await parseJson(res);
       if (!res.ok) {
         setError(data.error ?? "エラーが発生しました");
         return;
@@ -346,7 +352,7 @@ function CreateProposalForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, description, pointReward, deadline: deadline || undefined }),
       });
-      const data = await res.json();
+      const data = await parseJson(res);
       if (!res.ok) {
         setError(data.error ?? "エラーが発生しました");
         return;
