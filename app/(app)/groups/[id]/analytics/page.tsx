@@ -47,10 +47,19 @@ type AnalyticsData = {
   questTimeseries: { month: string; govCreated: number; memberCreated: number; completed: number }[];
   proposalTimeseries: { month: string; created: number; approved: number; rejected: number }[];
   memberPointHistory: { memberId: string; name: string; currentPoints: number; history: { month: string; balance: number }[] }[];
+  memberProposalStats: { memberId: string; name: string; proposalCount: number }[];
 };
+
+type PieMode = "points" | "completions" | "proposals";
 
 // ─── 定数 ───────────────────────────────────────────────────
 const MEMBER_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"];
+
+const PIE_MODE_LABELS: Record<PieMode, string> = {
+  points: "保有ポイント",
+  completions: "クエスト完了数",
+  proposals: "提案数",
+};
 
 // ─── メインページ ────────────────────────────────────────────
 export default function GroupAnalyticsPage() {
@@ -59,6 +68,7 @@ export default function GroupAnalyticsPage() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pieMode, setPieMode] = useState<PieMode>("points");
 
   useEffect(() => {
     Promise.all([
@@ -80,10 +90,9 @@ export default function GroupAnalyticsPage() {
 
   const pg: PointGroup = { pointUnit: group.pointUnit, laborCostPerHour: group.laborCostPerHour, timeUnit: group.timeUnit };
 
-  // ── ポイントランキング ──────────────────────────────────────
+  // ── 各モードのデータ ──────────────────────────────────────
   const sortedMembers = [...group.members].sort((a, b) => b.memberPoints - a.memberPoints);
 
-  // ── 完了数ランキング ──────────────────────────────────────
   const completedQuests = quests.filter((q) => q.status === "COMPLETED");
   const completionCount: Record<string, { member: Member; count: number }> = {};
   completedQuests.forEach((q) => {
@@ -95,6 +104,15 @@ export default function GroupAnalyticsPage() {
   });
   const completionRanking = Object.values(completionCount).sort((a, b) => b.count - a.count);
 
+  // 円グラフに渡すデータ
+  type PieEntry = { id: string; name: string; value: number; label: string };
+
+  const pieData: PieEntry[] = pieMode === "points"
+    ? sortedMembers.map((m) => ({ id: m.id, name: m.user.name ?? m.user.email, value: m.memberPoints, label: formatPoint(m.memberPoints, pg) }))
+    : pieMode === "completions"
+    ? completionRanking.map(({ member, count }) => ({ id: member.id, name: member.user.name ?? member.user.email, value: count, label: `${count} 件` }))
+    : (analytics?.memberProposalStats ?? []).map((s) => ({ id: s.memberId, name: s.name, value: s.proposalCount, label: `${s.proposalCount} 件` }));
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 space-y-10">
       {/* ヘッダー */}
@@ -105,59 +123,55 @@ export default function GroupAnalyticsPage() {
         <h2 className="text-2xl font-bold text-gray-800">グループ分析</h2>
       </div>
 
-      {/* ポイントランキング（円グラフ） */}
+      {/* 円グラフ（切り替えボタン付き） */}
       <div className="space-y-3">
-        <SubTitle>保有ポイント分布</SubTitle>
+        <div className="flex items-center gap-2 flex-wrap">
+          {(["points", "completions", "proposals"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setPieMode(mode)}
+              className={`px-3 py-1 text-xs rounded-full border transition ${
+                pieMode === mode
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "text-gray-600 border-gray-300 hover:border-blue-400"
+              }`}
+            >
+              {PIE_MODE_LABELS[mode]}
+            </button>
+          ))}
+        </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-6">
           <ResponsiveContainer width={220} height={220}>
             <PieChart>
-              <Pie data={sortedMembers.map((m, i) => ({ name: m.user.name ?? m.user.email, value: m.memberPoints, color: MEMBER_COLORS[i % MEMBER_COLORS.length] }))} dataKey="value" cx="50%" cy="50%" outerRadius={90} startAngle={90} endAngle={-270} label={false}>
-                {sortedMembers.map((m, i) => (
-                  <Cell key={m.id} fill={MEMBER_COLORS[i % MEMBER_COLORS.length]} />
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={90}
+                startAngle={90}
+                endAngle={-270}
+                label={false}
+              >
+                {pieData.map((entry, i) => (
+                  <Cell key={entry.id} fill={MEMBER_COLORS[i % MEMBER_COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v) => formatPoint(Number(v), pg)} />
+              <Tooltip formatter={(v, name) => [pieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`, name]} />
             </PieChart>
           </ResponsiveContainer>
           <ul className="space-y-2 flex-1 min-w-0">
-            {sortedMembers.map((m, i) => (
-              <li key={m.id} className="flex items-center gap-2 text-sm">
+            {pieData.map((entry, i) => (
+              <li key={entry.id} className="flex items-center gap-2 text-sm">
                 <span className="inline-block w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
-                <span className="flex-1 truncate text-gray-700">{m.user.name ?? m.user.email}</span>
-                <span className="font-bold shrink-0" style={{ color: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>{formatPoint(m.memberPoints, pg)}</span>
+                <span className="flex-1 truncate text-gray-700">{entry.name}</span>
+                <span className="font-bold shrink-0" style={{ color: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>{entry.label}</span>
               </li>
             ))}
           </ul>
         </div>
       </div>
-
-      {/* 完了数ランキング（円グラフ） */}
-      {completionRanking.length > 0 && (
-        <div className="space-y-3">
-          <SubTitle>クエスト完了数分布</SubTitle>
-          <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-6">
-            <ResponsiveContainer width={220} height={220}>
-              <PieChart>
-                <Pie data={completionRanking.map(({ member, count }, i) => ({ name: member.user.name ?? member.user.email, value: count, color: MEMBER_COLORS[i % MEMBER_COLORS.length] }))} dataKey="value" cx="50%" cy="50%" outerRadius={90} startAngle={90} endAngle={-270} label={false}>
-                  {completionRanking.map(({ member }, i) => (
-                    <Cell key={member.id} fill={MEMBER_COLORS[i % MEMBER_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v) => `${v} 件`} />
-              </PieChart>
-            </ResponsiveContainer>
-            <ul className="space-y-2 flex-1 min-w-0">
-              {completionRanking.map(({ member, count }, i) => (
-                <li key={member.id} className="flex items-center gap-2 text-sm">
-                  <span className="inline-block w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
-                  <span className="flex-1 truncate text-gray-700">{member.user.name ?? member.user.email}</span>
-                  <span className="font-bold shrink-0" style={{ color: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>{count} 件</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
 
       {/* 各人の保有ポイント推移 */}
       {analytics && analytics.memberPointHistory.length > 0 && analytics.memberPointHistory[0].history.length > 1 && (

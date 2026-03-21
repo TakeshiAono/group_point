@@ -136,5 +136,18 @@ export async function GET(
     };
   });
 
-  return NextResponse.json({ questTimeseries, proposalTimeseries, memberPointHistory });
+  // ────────────────────────────────────────────────────────────
+  // 4. メンバー別提案数
+  // ────────────────────────────────────────────────────────────
+  const memberProposalCount: Record<string, number> = {};
+  for (const p of proposals) {
+    memberProposalCount[p.proposerId] = (memberProposalCount[p.proposerId] ?? 0) + 1;
+  }
+  const memberProposalStats = members.map((m) => ({
+    memberId: m.id,
+    name: m.user.name ?? m.user.email,
+    proposalCount: memberProposalCount[m.id] ?? 0,
+  })).sort((a, b) => b.proposalCount - a.proposalCount);
+
+  return NextResponse.json({ questTimeseries, proposalTimeseries, memberPointHistory, memberProposalStats });
 }
