@@ -771,13 +771,20 @@ function GrantPointsSection({
   onGranted: (memberId: string | null, amount: number) => void;
   group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
 }) {
-  const [mode, setMode] = useState<"individual" | "all">("individual");
+  const [mode, setMode] = useState<"individual" | "multiple" | "all">("individual");
   const [selectedMemberId, setSelectedMemberId] = useState(members[0]?.id ?? "");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [amount, setAmount] = useState(0);
   const [selectedInputUnit, setSelectedInputUnit] = useState(group.timeUnit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  function toggleMemberId(id: string) {
+    setSelectedMemberIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
 
   // 入力単位の切り替えが可能か（円表示 & 人件費設定済みの場合）
   const canSelectUnit = group.pointUnit === "円" && group.laborCostPerHour > 0;
@@ -795,8 +802,9 @@ function GrantPointsSection({
     const ptAmount = unitToPt(amount, inputGroup);
     setSubmitting(true);
     try {
-      const body: { amount: number; memberId?: string } = { amount: ptAmount };
+      const body: { amount: number; memberId?: string; memberIds?: string[] } = { amount: ptAmount };
       if (mode === "individual") body.memberId = selectedMemberId;
+      if (mode === "multiple") body.memberIds = selectedMemberIds;
       const res = await fetch(`/api/groups/${groupId}/grant`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -810,6 +818,10 @@ function GrantPointsSection({
       if (mode === "individual") {
         onGranted(selectedMemberId, ptAmount);
         setSuccess(`${amount} ${unitLabel} を付与しました`);
+      } else if (mode === "multiple") {
+        onGranted(null, ptAmount);
+        setSuccess(`${data.memberCount}人に ${amount} ${unitLabel} を付与しました（合計 ${data.totalGranted} pt）`);
+        setSelectedMemberIds([]);
       } else {
         onGranted(null, ptAmount);
         setSuccess(`全員に ${amount} ${unitLabel} を付与しました（合計 ${data.totalGranted} pt）`);
@@ -826,22 +838,37 @@ function GrantPointsSection({
 
       <div className="flex gap-4">
         <label className="flex items-center gap-2 cursor-pointer text-sm">
-          <input
-            type="radio"
-            checked={mode === "individual"}
-            onChange={() => setMode("individual")}
-          />
+          <input type="radio" checked={mode === "individual"} onChange={() => setMode("individual")} />
           個人に付与
         </label>
         <label className="flex items-center gap-2 cursor-pointer text-sm">
-          <input
-            type="radio"
-            checked={mode === "all"}
-            onChange={() => setMode("all")}
-          />
+          <input type="radio" checked={mode === "multiple"} onChange={() => { setMode("multiple"); setSelectedMemberIds([]); }} />
+          複数人に付与
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer text-sm">
+          <input type="radio" checked={mode === "all"} onChange={() => setMode("all")} />
           全員に付与
         </label>
       </div>
+
+      {mode === "multiple" && (
+        <div className="flex flex-wrap gap-2">
+          {members.map((m) => (
+            <label key={m.id} className="flex items-center gap-1.5 cursor-pointer text-sm border border-gray-200 rounded-lg px-3 py-1.5 hover:border-blue-400 transition">
+              <input
+                type="checkbox"
+                checked={selectedMemberIds.includes(m.id)}
+                onChange={() => toggleMemberId(m.id)}
+                className="rounded"
+              />
+              {m.user.name ?? m.user.email}
+            </label>
+          ))}
+          {selectedMemberIds.length > 0 && (
+            <span className="text-xs text-gray-400 self-center">{selectedMemberIds.length}人選択中</span>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-wrap gap-3 items-end">
         {mode === "individual" && (
