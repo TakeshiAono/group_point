@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Group" ADD COLUMN "displayMultiplier" DOUBLE PRECISION NOT NULL DEFAULT 1;
