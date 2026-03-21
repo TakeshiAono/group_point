@@ -317,21 +317,6 @@ export default function GroupDetailPage() {
           />
         )}
 
-        {/* メンバー一覧（全員） */}
-        <MemberSection
-          title="メンバー"
-          members={[...group.members].sort((a, b) => {
-            const order = { ADMIN: 0, LEADER: 1, MEMBER: 2 };
-            return order[a.role] - order[b.role];
-          })}
-          groupId={id}
-          canDelete={canDelete}
-          onRemoved={removeMember}
-          inviteLeaderRole={myRole === "ADMIN" ? "LEADER" : undefined}
-          inviteMemberRole={myRole === "ADMIN" || myRole === "LEADER" ? "MEMBER" : undefined}
-          pointGroup={group}
-        />
-
         {/* ポイント付与（ADMINのみ） */}
         {myRole === "ADMIN" && (
           <GrantPointsSection
@@ -353,6 +338,21 @@ export default function GroupDetailPage() {
             }}
           />
         )}
+
+        {/* メンバー一覧（全員） */}
+        <MemberSection
+          title="メンバー"
+          members={[...group.members].sort((a, b) => {
+            const order = { ADMIN: 0, LEADER: 1, MEMBER: 2 };
+            return order[a.role] - order[b.role];
+          })}
+          groupId={id}
+          canDelete={canDelete}
+          onRemoved={removeMember}
+          inviteLeaderRole={myRole === "ADMIN" ? "LEADER" : undefined}
+          inviteMemberRole={myRole === "ADMIN" || myRole === "LEADER" ? "MEMBER" : undefined}
+          pointGroup={group}
+        />
       </main>
     </div>
   );
