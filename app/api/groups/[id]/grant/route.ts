@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 
 // ポイントを直接付与する（ADMINのみ）
 // 管理側の未割当ポイント（発行済み - 流通中 - 管理側案件の報酬合計）から充当する
-// body: { amount: number, memberId?: string }
+// body: { amount: number, memberId?: string, memberIds?: string[] }
 //   memberId あり → 個人付与
-//   memberId なし → グループ全員に付与（合計 = amount × 人数）
+//   memberIds あり → 複数人付与（合計 = amount × 人数）
+//   どちらもなし → グループ全員に付与（合計 = amount × 人数）
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -17,7 +18,7 @@ export async function POST(
   }
 
   const { id: groupId } = await params;
-  const { amount, memberId } = await req.json();
+  const { amount, memberId, memberIds } = await req.json();
 
   if (typeof amount !== "number" || !Number.isInteger(amount) || amount <= 0) {
     return NextResponse.json({ error: "付与量は1以上の整数で指定してください" }, { status: 400 });
@@ -61,9 +62,26 @@ export async function POST(
       include: { user: { select: { id: true, name: true, email: true } } },
     });
     return NextResponse.json({ type: "individual", updated });
+  } else if (Array.isArray(memberIds) && memberIds.length > 0) {
+    // ── 複数人付与 ──────────────────────────────────────────
+    const validIds = memberIds.filter((id) => allMembers.some((m) => m.id === id));
+    if (validIds.length === 0) {
+      return NextResponse.json({ error: "有効なメンバーが選択されていません" }, { status: 400 });
+    }
+    const totalCost = amount * validIds.length;
+    if (totalCost > available) {
+      return NextResponse.json(
+        { error: `未割当ポイントが不足しています（必要: ${totalCost} pt、残り: ${available} pt）` },
+        { status: 400 }
+      );
+    }
+    await prisma.groupMember.updateMany({
+      where: { id: { in: validIds } },
+      data: { memberPoints: { increment: amount } },
+    });
+    return NextResponse.json({ type: "multiple", totalGranted: totalCost, memberCount: validIds.length });
   } else {
     // ── 全員付与 ──────────────────────────────────────────
-    const targets = allMembers.filter((m) => m.id !== operator.id); // ADMIN自身は除外するか含めるか？→含める
     const totalCost = amount * allMembers.length;
     if (totalCost > available) {
       return NextResponse.json(
