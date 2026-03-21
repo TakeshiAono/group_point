@@ -78,6 +78,7 @@ export default function QuestDetailPage() {
   const [appliedBonus, setAppliedBonus] = useState<{ thresholdPercent: number; bonusRate: number } | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState("");
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -103,6 +104,10 @@ export default function QuestDetailPage() {
 
   const canManageSubQuest =
     myMember && (quest.creator.id === myMember.id || quest.completer?.id === myMember.id);
+
+  const canEdit =
+    myMember && quest.creator.id === myMember.id &&
+    quest.status !== "COMPLETED" && quest.status !== "CANCELLED";
 
   const canAccept =
     myMember && quest.status === "OPEN" && quest.creator.id !== myMember.id;
@@ -169,11 +174,30 @@ export default function QuestDetailPage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-bold text-gray-800">{quest.title}</h2>
-          {quest.description && (
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="text-xl font-bold text-gray-800">{quest.title}</h2>
+            {canEdit && (
+              <button
+                onClick={() => setEditing((v) => !v)}
+                className="shrink-0 text-xs text-gray-400 hover:text-blue-600 transition border border-gray-200 rounded px-2 py-0.5"
+              >
+                {editing ? "キャンセル" : "編集"}
+              </button>
+            )}
+          </div>
+          {quest.description && !editing && (
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">{quest.description}</p>
           )}
         </div>
+
+        {editing && (
+          <EditQuestForm
+            groupId={groupId}
+            quest={quest}
+            onSaved={(updated) => { setQuest(updated); setEditing(false); }}
+            onCancel={() => setEditing(false)}
+          />
+        )}
 
         <div className="flex items-center gap-2 py-3 border-t border-gray-100">
           <span className="text-sm text-gray-500">報酬</span>
@@ -653,5 +677,113 @@ function QuestLogSection({ groupId, questId }: { groupId: string; questId: strin
         </ul>
       )}
     </div>
+  );
+}
+
+function EditQuestForm({
+  groupId,
+  quest,
+  onSaved,
+  onCancel,
+}: {
+  groupId: string;
+  quest: Quest;
+  onSaved: (updated: Quest) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState(quest.title);
+  const [description, setDescription] = useState(quest.description ?? "");
+  const [pointReward, setPointReward] = useState(quest.pointReward);
+  const [deadline, setDeadline] = useState(
+    quest.deadline ? new Date(quest.deadline).toISOString().slice(0, 10) : ""
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/groups/${groupId}/quests/${quest.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description: description || null,
+          pointReward,
+          deadline: deadline || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "保存に失敗しました");
+        return;
+      }
+      onSaved(data);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3 border-t border-gray-100 pt-4">
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">タイトル</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">説明</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">報酬（pt）</label>
+        <input
+          type="number"
+          value={pointReward}
+          onChange={(e) => setPointReward(Number(e.target.value))}
+          min={1}
+          required
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">期限</label>
+        <input
+          type="date"
+          value={deadline}
+          onChange={(e) => setDeadline(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+        />
+      </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <div className="flex gap-2 pt-1">
+        <button
+          type="submit"
+          disabled={saving}
+          className="flex-1 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+        >
+          {saving ? "保存中..." : "保存"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 py-2 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition"
+        >
+          キャンセル
+        </button>
+      </div>
+    </form>
   );
 }
