@@ -42,6 +42,14 @@ export async function POST(_req: Request, { params }: Params) {
     return NextResponse.json({ error: "進行中のクエストのみ完了できます" }, { status: 400 });
   }
 
+  // サブクエストが一つもない場合は完了不可
+  if (quest.subQuests.length === 0) {
+    return NextResponse.json(
+      { error: "サブクエストが存在しません。少なくとも1つのサブクエストが必要です。" },
+      { status: 400 }
+    );
+  }
+
   // 依頼中（未承諾）のサブクエストがある場合は完了不可
   const requestedSubQuests = quest.subQuests.filter((sq) => sq.status === "REQUESTED");
   if (requestedSubQuests.length > 0) {
