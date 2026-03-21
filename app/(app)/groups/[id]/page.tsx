@@ -381,8 +381,10 @@ export default function GroupDetailPage() {
           groupId={id}
           canDelete={canDelete}
           onRemoved={removeMember}
-          inviteLeaderRole={myRole === "ADMIN" ? "LEADER" : undefined}
-          inviteMemberRole={myRole === "ADMIN" || myRole === "LEADER" ? "MEMBER" : undefined}
+          inviteRoles={[
+            ...(myRole === "ADMIN" ? ["LEADER" as const] : []),
+            ...(myRole === "ADMIN" || myRole === "LEADER" ? ["MEMBER" as const] : []),
+          ]}
           pointGroup={group}
         />
       </main>
@@ -396,8 +398,7 @@ function MemberSection({
   groupId,
   canDelete,
   onRemoved,
-  inviteLeaderRole,
-  inviteMemberRole,
+  inviteRoles,
   pointGroup,
 }: {
   title: string;
@@ -405,8 +406,7 @@ function MemberSection({
   groupId: string;
   canDelete: (m: Member) => boolean;
   onRemoved: (id: string) => void;
-  inviteLeaderRole?: "LEADER";
-  inviteMemberRole?: "MEMBER";
+  inviteRoles: ("LEADER" | "MEMBER")[];
   pointGroup: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
 }) {
   return (
@@ -429,8 +429,7 @@ function MemberSection({
           ))}
         </ul>
       )}
-      {inviteLeaderRole && <InviteForm groupId={groupId} role={inviteLeaderRole} />}
-      {inviteMemberRole && <InviteForm groupId={groupId} role={inviteMemberRole} />}
+      {inviteRoles.length > 0 && <InviteForm groupId={groupId} availableRoles={inviteRoles} />}
     </section>
   );
 }
@@ -492,13 +491,12 @@ function MemberRow({
   );
 }
 
-function InviteForm({ groupId, role }: { groupId: string; role: "LEADER" | "MEMBER" }) {
+function InviteForm({ groupId, availableRoles }: { groupId: string; availableRoles: ("LEADER" | "MEMBER")[] }) {
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"LEADER" | "MEMBER">(availableRoles[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  const label = role === "LEADER" ? "管理側メンバーを招待" : "一般メンバーを招待";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -525,7 +523,7 @@ function InviteForm({ groupId, role }: { groupId: string; role: "LEADER" | "MEMB
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5">
-      <p className="text-sm font-medium text-gray-700 mb-3">{label}</p>
+      <p className="text-sm font-medium text-gray-700 mb-3">メンバーを招待</p>
       <form onSubmit={handleSubmit} className="flex gap-3">
         <input
           type="email"
@@ -535,6 +533,16 @@ function InviteForm({ groupId, role }: { groupId: string; role: "LEADER" | "MEMB
           className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           required
         />
+        {availableRoles.length > 1 && (
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as "LEADER" | "MEMBER")}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="LEADER">管理側</option>
+            <option value="MEMBER">一般</option>
+          </select>
+        )}
         <button
           type="submit"
           disabled={submitting}
