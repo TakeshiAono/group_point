@@ -118,7 +118,10 @@ export default function GroupDetailPage() {
         {/* メンバー一覧（全員） */}
         <MemberSection
           title="メンバー"
-          members={group.members}
+          members={[...group.members].sort((a, b) => {
+            const order = { ADMIN: 0, LEADER: 1, MEMBER: 2 };
+            return order[a.role] - order[b.role];
+          })}
           groupId={id}
           canDelete={canDelete}
           onRemoved={removeMember}
