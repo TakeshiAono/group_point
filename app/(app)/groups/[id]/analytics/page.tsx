@@ -230,6 +230,10 @@ export default function GroupAnalyticsPage() {
               </button>
             ))}
           </div>
+          {/* 提案数は種別フィルター対象外の注記 */}
+          {pieMode === "proposals" && (
+            <p className="text-xs text-gray-400">※ 提案にはクエスト種別がないため、種別フィルターは反映されません</p>
+          )}
           {/* 期間セレクト */}
           <select
             value={selectedMonth}
