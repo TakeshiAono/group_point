@@ -399,7 +399,7 @@ function IssuedPointsEditor({
   const [pointUnit, setPointUnit] = useState(group.pointUnit);
   const [laborCost, setLaborCost] = useState(group.laborCostPerHour);
   const [timeUnit, setTimeUnit] = useState(group.timeUnit);
-  const [displayMultiplier, setDisplayMultiplier] = useState(group.displayMultiplier);
+  const [displayMultiplier, setDisplayMultiplier] = useState(group.displayMultiplier ?? 1);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsError, setSettingsError] = useState("");
 
