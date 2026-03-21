@@ -246,6 +246,11 @@ export default function QuestDetailPage() {
         )}
       </div>
 
+      {/* ボーナス・ペナルティルール（発行者のみ） */}
+      {myMember && quest.creator.id === myMember.id && quest.deadline && (
+        <BonusRulesSection groupId={groupId} questId={questId} />
+      )}
+
       {/* サブクエスト */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
         <div className="flex items-center justify-between">
@@ -315,10 +320,6 @@ export default function QuestDetailPage() {
         )}
       </div>
 
-      {/* ボーナス・ペナルティルール（発行者のみ） */}
-      {myMember && quest.creator.id === myMember.id && quest.deadline && (
-        <BonusRulesSection groupId={groupId} questId={questId} />
-      )}
     </div>
   );
 }
