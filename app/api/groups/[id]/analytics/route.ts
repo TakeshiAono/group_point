@@ -137,17 +137,44 @@ export async function GET(
   });
 
   // ────────────────────────────────────────────────────────────
-  // 4. メンバー別提案数
+  // 4. メンバー別完了数推移（累積）
   // ────────────────────────────────────────────────────────────
-  const memberProposalCount: Record<string, number> = {};
-  for (const p of proposals) {
-    memberProposalCount[p.proposerId] = (memberProposalCount[p.proposerId] ?? 0) + 1;
+  const memberCompletionMonthCount: Record<string, Record<string, number>> = {};
+  for (const log of completeLogs) {
+    const quest = quests.find((q) => q.id === log.questId);
+    if (!quest?.completerId) continue;
+    const m = toMonth(log.createdAt);
+    if (!memberCompletionMonthCount[quest.completerId]) memberCompletionMonthCount[quest.completerId] = {};
+    memberCompletionMonthCount[quest.completerId][m] = (memberCompletionMonthCount[quest.completerId][m] ?? 0) + 1;
   }
-  const memberProposalStats = members.map((m) => ({
-    memberId: m.id,
-    name: m.user.name ?? m.user.email,
-    proposalCount: memberProposalCount[m.id] ?? 0,
-  })).sort((a, b) => b.proposalCount - a.proposalCount);
+  const memberCompletionHistory = members.map((m) => {
+    const monthCounts = memberCompletionMonthCount[m.id] ?? {};
+    let running = 0;
+    const history = allMonths.map((month) => {
+      running += monthCounts[month] ?? 0;
+      return { month, count: running };
+    });
+    return { memberId: m.id, name: m.user.name ?? m.user.email, history };
+  });
 
-  return NextResponse.json({ questTimeseries, proposalTimeseries, memberPointHistory, memberProposalStats });
+  // ────────────────────────────────────────────────────────────
+  // 5. メンバー別提案数推移（累積）
+  // ────────────────────────────────────────────────────────────
+  const memberProposalMonthCount: Record<string, Record<string, number>> = {};
+  for (const p of proposals) {
+    const m = toMonth(p.createdAt);
+    if (!memberProposalMonthCount[p.proposerId]) memberProposalMonthCount[p.proposerId] = {};
+    memberProposalMonthCount[p.proposerId][m] = (memberProposalMonthCount[p.proposerId][m] ?? 0) + 1;
+  }
+  const memberProposalHistory = members.map((m) => {
+    const monthCounts = memberProposalMonthCount[m.id] ?? {};
+    let running = 0;
+    const history = allMonths.map((month) => {
+      running += monthCounts[month] ?? 0;
+      return { month, count: running };
+    });
+    return { memberId: m.id, name: m.user.name ?? m.user.email, history };
+  });
+
+  return NextResponse.json({ questTimeseries, proposalTimeseries, memberPointHistory, memberCompletionHistory, memberProposalHistory });
 }
