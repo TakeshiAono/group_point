@@ -39,6 +39,8 @@ model Group {
   laborCostPerHour  Int           @default(0)
   /// 1ptが表す時間単位: "HOUR"=時間, "WEEK"=週, "MONTH"=月
   timeUnit          String        @default("HOUR")
+  /// クエスト提案が承認されたときに提案者へ付与する一律報酬ポイント
+  proposalReward    Int           @default(0)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   members           GroupMember[]

@@ -42,6 +42,7 @@ export async function POST(
   const description: string | null = body.description !== undefined ? (body.description?.trim() || null) : proposal.description;
 
   const group = await prisma.group.findUnique({ where: { id: groupId } });
+  const proposalReward = group!.proposalReward;
   const members = await prisma.groupMember.findMany({ where: { groupId } });
   const totalCirculating = members.reduce((sum, m) => sum + m.memberPoints, 0);
   const activeGovQuests = await prisma.quest.findMany({
@@ -73,6 +74,14 @@ export async function POST(
       completer: { include: { user: { select: { id: true, name: true, email: true } } } },
     },
   });
+
+  // 提案者に一律報酬を付与
+  if (proposalReward > 0) {
+    await prisma.groupMember.update({
+      where: { id: proposal.proposerId },
+      data: { memberPoints: { increment: proposalReward } },
+    });
+  }
 
   const updatedProposal = await prisma.questProposal.update({
     where: { id: proposalId },
