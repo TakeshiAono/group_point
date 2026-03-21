@@ -7,12 +7,10 @@ function toMonth(date: Date): string {
 }
 
 function toWeek(date: Date): string {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const jan4 = new Date(d.getFullYear(), 0, 4);
-  const weekNum = 1 + Math.round(((d.getTime() - jan4.getTime()) / 86400000 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
-  return `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const weekOfMonth = Math.ceil(date.getDate() / 7);
+  return `${year}-${month}-w${weekOfMonth}`;
 }
 
 function toBucket(date: Date, granularity: "month" | "week"): string {
