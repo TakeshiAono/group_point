@@ -250,6 +250,12 @@ export default function QuestDetailPage() {
             </dd>
           </div>
           <div className="flex justify-between">
+            <dt className="text-gray-400">支払者</dt>
+            <dd className="text-gray-700 font-medium">
+              {quest.questType === "GOVERNMENT" ? "政府" : quest.creator.user.name ?? quest.creator.user.email}
+            </dd>
+          </div>
+          <div className="flex justify-between">
             <dt className="text-gray-400">受注者</dt>
             <dd className="text-gray-700 font-medium">
               {quest.completer ? quest.completer.user.name ?? quest.completer.user.email : "—"}
