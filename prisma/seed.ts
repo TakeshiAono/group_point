@@ -132,12 +132,39 @@ async function main() {
     });
   }
 
+  // ── クエスト提案作成 ──────────────────────────────────────
+  const proposalData = [
+    {
+      proposerId: memberRecords[0].id,
+      title: "駅前の歩道整備",
+      description: "駅前の歩道が老朽化しており、転倒事故が多発しています。早急な整備をお願いします。",
+      pointReward: 300,
+    },
+    {
+      proposerId: memberRecords[1].id,
+      title: "公民館の Wi-Fi 設置",
+      description: "公民館にWi-Fi環境がなく、デジタル講座の開催が困難です。整備をご検討ください。",
+      pointReward: 150,
+    },
+    {
+      proposerId: memberRecords[2].id,
+      title: "子ども向け交通安全教室の開催",
+      description: "春の交通安全週間に合わせて、小学生向けの教室を企画してほしいです。",
+      pointReward: 80,
+    },
+  ];
+  for (const p of proposalData) {
+    await prisma.questProposal.create({
+      data: { groupId: group.id, ...p },
+    });
+  }
+
   console.log("✅ シードデータを投入しました");
   console.log("   グループ:", group.name);
   console.log("   ADMIN  :", admin.email);
   console.log("   LEADER :", leaders.map((l) => l.email).join(", "));
   console.log("   MEMBER :", members.map((m) => m.email).join(", "));
-  console.log("   政府案件: 3件 / メンバー案件: 2件");
+  console.log("   政府案件: 3件 / メンバー案件: 2件 / クエスト提案: 3件");
   console.log("   パスワード: password123");
 }
 
