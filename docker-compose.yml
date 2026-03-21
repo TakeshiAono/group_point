@@ -10,5 +10,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"  # SMTP（アプリからメールを受信）
+      - "8025:8025"  # Web UI（ブラウザで確認）
+
 volumes:
   postgres_data:
