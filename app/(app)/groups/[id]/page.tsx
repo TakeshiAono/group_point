@@ -126,13 +126,14 @@ export default function GroupDetailPage() {
   );
 
   const totalMyItems = myAcceptedQuests.length + myActiveSubQuests.length;
-  // 合計5件になるよう配分（クエスト優先）
-  const questSlots = Math.min(myAcceptedQuests.length, 5);
-  const subQuestSlots = Math.min(myActiveSubQuests.length, 5 - questSlots);
-  const displayedQuests = myAcceptedQuests.slice(0, questSlots);
-  const displayedSubQuests = myActiveSubQuests.slice(0, subQuestSlots);
+  const displayedQuests = myAcceptedQuests.slice(0, 3);
+  const displayedSubQuests = myActiveSubQuests.slice(0, 3);
 
-  const totalCirculating = group.members.reduce((sum, m) => sum + m.memberPoints, 0);
+  const memberPointsTotal = group.members.reduce((sum, m) => sum + m.memberPoints, 0);
+  const allocatedQuestPoints = quests
+    .filter((q) => q.questType === "GOVERNMENT" && (q.status === "OPEN" || q.status === "IN_PROGRESS"))
+    .reduce((sum, q) => sum + q.pointReward, 0);
+  const totalCirculating = memberPointsTotal + allocatedQuestPoints;
 
   function removeMember(removedId: string) {
     setGroup((prev) =>
@@ -229,7 +230,7 @@ export default function GroupDetailPage() {
                   </div>
                 </div>
               )}
-              {totalMyItems > 5 && (
+              {totalMyItems > 3 && (
                 <Link
                   href={`/groups/${id}/quests`}
                   className="block text-xs text-blue-500 hover:text-blue-700 text-right pt-2"

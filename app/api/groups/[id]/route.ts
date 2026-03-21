@@ -40,10 +40,16 @@ export async function PATCH(
     return NextResponse.json({ error: "発行済みポイントが0を下回ることはできません" }, { status: 400 });
   }
 
-  // 回収の場合：流通中ポイントを下回れない
+  // 回収の場合：流通中ポイント（メンバー保有 + アクティブ案件割当）を下回れない
   if (delta < 0) {
     const members = await prisma.groupMember.findMany({ where: { groupId } });
-    const totalCirculating = members.reduce((sum, m) => sum + m.memberPoints, 0);
+    const memberPointsTotal = members.reduce((sum, m) => sum + m.memberPoints, 0);
+    const activeGovQuests = await prisma.quest.findMany({
+      where: { groupId, questType: "GOVERNMENT", status: { in: ["OPEN", "IN_PROGRESS"] } },
+      select: { pointReward: true },
+    });
+    const allocatedQuestPoints = activeGovQuests.reduce((sum, q) => sum + q.pointReward, 0);
+    const totalCirculating = memberPointsTotal + allocatedQuestPoints;
     if (newTotal < totalCirculating) {
       const reclaimable = group.totalIssuedPoints - totalCirculating;
       return NextResponse.json(
