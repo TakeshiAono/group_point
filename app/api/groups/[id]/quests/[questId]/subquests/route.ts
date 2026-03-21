@@ -43,10 +43,15 @@ export async function POST(
   }
 
   const { id: groupId, questId } = await params;
-  const { title, assigneeId, deadline } = await req.json();
+  const { title, assigneeId, deadline, pointReward } = await req.json();
 
   if (!title?.trim()) {
     return NextResponse.json({ error: "タイトルは必須です" }, { status: 400 });
+  }
+
+  const reward = typeof pointReward === "number" ? pointReward : 0;
+  if (reward < 0 || !Number.isInteger(reward)) {
+    return NextResponse.json({ error: "報酬は0以上の整数で入力してください" }, { status: 400 });
   }
 
   const member = await prisma.groupMember.findUnique({
@@ -56,7 +61,10 @@ export async function POST(
     return NextResponse.json({ error: "グループのメンバーではありません" }, { status: 403 });
   }
 
-  const quest = await prisma.quest.findUnique({ where: { id: questId } });
+  const quest = await prisma.quest.findUnique({
+    where: { id: questId },
+    include: { subQuests: { select: { pointReward: true } } },
+  });
   if (!quest || quest.groupId !== groupId) {
     return NextResponse.json({ error: "クエストが見つかりません" }, { status: 404 });
   }
@@ -64,6 +72,15 @@ export async function POST(
   // サブクエスト作成者はクエストの受注者か作成者のみ
   if (quest.creatorId !== member.id && quest.completerId !== member.id) {
     return NextResponse.json({ error: "サブクエストを作成できるのはクエストの発行者または受注者のみです" }, { status: 403 });
+  }
+
+  // 既存サブクエストの報酬合計 + 今回の報酬がクエスト報酬を超えないか確認
+  const usedReward = quest.subQuests.reduce((sum, sq) => sum + sq.pointReward, 0);
+  if (usedReward + reward > quest.pointReward) {
+    return NextResponse.json(
+      { error: `報酬の合計がクエスト報酬（${quest.pointReward} pt）を超えます。残り ${quest.pointReward - usedReward} pt まで設定できます。` },
+      { status: 400 }
+    );
   }
 
   // assigneeId が指定されている場合、同グループのメンバーか確認
@@ -75,7 +92,13 @@ export async function POST(
   }
 
   const subQuest = await prisma.subQuest.create({
-    data: { questId, title: title.trim(), assigneeId: assigneeId ?? null, deadline: deadline ? new Date(deadline) : null },
+    data: {
+      questId,
+      title: title.trim(),
+      assigneeId: assigneeId ?? null,
+      deadline: deadline ? new Date(deadline) : null,
+      pointReward: reward,
+    },
     include: {
       assignee: { include: { user: { select: { id: true, name: true, email: true } } } },
     },

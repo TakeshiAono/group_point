@@ -95,15 +95,17 @@ model Quest {
 
 /// クエストに紐づくサブクエスト。メンバーを割り当てて協力を募ることができる。
 model SubQuest {
-  id         String          @id @default(cuid())
-  questId    String
-  title      String
+  id          String          @id @default(cuid())
+  questId     String
+  title       String
   /// 担当メンバー（GroupMember.id）任意
-  assigneeId String?
-  status     SubQuestStatus  @default(REQUESTED)
-  deadline   DateTime?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+  assigneeId  String?
+  status      SubQuestStatus  @default(REQUESTED)
+  /// サブクエスト報酬ポイント（クエスト合計を超えない）
+  pointReward Int             @default(0)
+  deadline    DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
   quest      Quest           @relation(fields: [questId], references: [id], onDelete: Cascade)
   assignee   GroupMember?    @relation(fields: [assigneeId], references: [id])
 }

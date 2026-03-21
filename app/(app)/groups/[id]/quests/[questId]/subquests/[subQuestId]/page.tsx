@@ -12,6 +12,7 @@ type SubQuest = {
   title: string;
   status: "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   deadline: string | null;
+  pointReward: number;
   assignee: QuestMember | null;
   createdAt: string;
   quest: {
@@ -154,6 +155,11 @@ export default function SubQuestDetailPage() {
         </div>
 
         <h2 className="text-xl font-bold text-gray-800">{subQuest.title}</h2>
+
+        <div className="flex items-center gap-2 py-3 border-t border-gray-100">
+          <span className="text-sm text-gray-500">報酬</span>
+          <span className="text-2xl font-bold text-blue-600">{subQuest.pointReward} pt</span>
+        </div>
 
         <dl className="space-y-3 border-t border-gray-100 pt-4 text-sm">
           <div className="flex justify-between">

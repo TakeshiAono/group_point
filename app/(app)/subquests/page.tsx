@@ -11,6 +11,7 @@ type SubQuest = {
   title: string;
   status: "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   deadline: string | null;
+  pointReward: number;
   createdAt: string;
   assignee: QuestMember | null;
   quest: {
@@ -126,6 +127,9 @@ export default function SubQuestsPage() {
                           </p>
                         )}
                       </div>
+                      {sq.pointReward > 0 && (
+                        <span className="text-sm font-bold text-blue-600 shrink-0">{sq.pointReward} pt</span>
+                      )}
                     </Link>
                   </li>
                 );

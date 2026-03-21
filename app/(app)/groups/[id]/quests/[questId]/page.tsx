@@ -12,6 +12,7 @@ type SubQuest = {
   title: string;
   status: "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   deadline: string | null;
+  pointReward: number;
   assignee: QuestMember | null;
 };
 
@@ -158,7 +159,19 @@ export default function QuestDetailPage() {
 
       {/* サブクエスト */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
-        <h3 className="font-semibold text-gray-800">サブクエスト</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-gray-800">サブクエスト</h3>
+          {quest.subQuests.length > 0 && (
+            <span className="text-xs text-gray-500">
+              報酬合計:{" "}
+              <span className="font-bold text-blue-600">
+                {quest.subQuests.reduce((s, sq) => s + sq.pointReward, 0)} pt
+              </span>
+              {" / "}
+              {quest.pointReward} pt
+            </span>
+          )}
+        </div>
 
         {quest.subQuests.length === 0 ? (
           <p className="text-sm text-gray-400">サブクエストはありません</p>
@@ -174,7 +187,7 @@ export default function QuestDetailPage() {
                     href={`/groups/${groupId}/quests/${questId}/subquests/${sq.id}`}
                     className="flex items-center justify-between px-4 py-2.5"
                   >
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-800">{sq.title}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         担当: {sq.assignee ? sq.assignee.user.name ?? sq.assignee.user.email : "未割当"}
@@ -186,9 +199,14 @@ export default function QuestDetailPage() {
                         )}
                       </p>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SUB_STATUS_COLOR[sq.status]}`}>
-                      {SUB_STATUS_LABEL[sq.status]}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {sq.pointReward > 0 && (
+                        <span className="text-sm font-bold text-blue-600">{sq.pointReward} pt</span>
+                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SUB_STATUS_COLOR[sq.status]}`}>
+                        {SUB_STATUS_LABEL[sq.status]}
+                      </span>
+                    </div>
                   </Link>
                 </li>
               );
@@ -201,6 +219,8 @@ export default function QuestDetailPage() {
             groupId={groupId}
             questId={questId}
             members={members}
+            questPointReward={quest.pointReward}
+            usedPointReward={quest.subQuests.reduce((s, sq) => s + sq.pointReward, 0)}
             onAdded={(sq) => setQuest((prev) => prev ? { ...prev, subQuests: [...prev.subQuests, sq] } : prev)}
           />
         )}
@@ -213,28 +233,44 @@ function AddSubQuestForm({
   groupId,
   questId,
   members,
+  questPointReward,
+  usedPointReward,
   onAdded,
 }: {
   groupId: string;
   questId: string;
   members: GroupMember[];
+  questPointReward: number;
+  usedPointReward: number;
   onAdded: (sq: SubQuest) => void;
 }) {
   const [title, setTitle] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [pointReward, setPointReward] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const remaining = questPointReward - usedPointReward;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (pointReward > remaining) {
+      setError(`報酬が残り上限（${remaining} pt）を超えています`);
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/groups/${groupId}/quests/${questId}/subquests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, assigneeId: assigneeId || undefined, deadline: deadline || undefined }),
+        body: JSON.stringify({
+          title,
+          assigneeId: assigneeId || undefined,
+          deadline: deadline || undefined,
+          pointReward,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -245,6 +281,7 @@ function AddSubQuestForm({
       setTitle("");
       setAssigneeId("");
       setDeadline("");
+      setPointReward(0);
     } finally {
       setSubmitting(false);
     }
@@ -273,6 +310,19 @@ function AddSubQuestForm({
           </option>
         ))}
       </select>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">
+          報酬（最大 {remaining} pt）
+        </label>
+        <input
+          type="number"
+          min={0}
+          max={remaining}
+          value={pointReward}
+          onChange={(e) => setPointReward(Number(e.target.value))}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      </div>
       <div>
         <label className="block text-xs text-gray-500 mb-1">デッドライン（任意）</label>
         <input
