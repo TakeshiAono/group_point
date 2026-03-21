@@ -10,7 +10,7 @@ type QuestMember = { id: string; user: QuestUser };
 type SubQuest = {
   id: string;
   title: string;
-  status: "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  status: "REQUESTED" | "ASSIGNED" | "CHANGE_PENDING" | "CHANGE_DENIED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   deadline: string | null;
   pointReward: number;
   assignee: QuestMember | null;
@@ -49,6 +49,8 @@ const STATUS_COLOR: Record<Quest["status"], string> = {
 const SUB_STATUS_LABEL: Record<SubQuest["status"], string> = {
   REQUESTED: "依頼中",
   ASSIGNED: "アサイン済み",
+  CHANGE_PENDING: "変更承認待ち",
+  CHANGE_DENIED: "変更否認",
   IN_PROGRESS: "進行中",
   COMPLETED: "完了",
   CANCELLED: "キャンセル",
@@ -57,6 +59,8 @@ const SUB_STATUS_LABEL: Record<SubQuest["status"], string> = {
 const SUB_STATUS_COLOR: Record<SubQuest["status"], string> = {
   REQUESTED: "bg-blue-100 text-blue-700",
   ASSIGNED: "bg-purple-100 text-purple-700",
+  CHANGE_PENDING: "bg-orange-100 text-orange-700",
+  CHANGE_DENIED: "bg-red-100 text-red-600",
   IN_PROGRESS: "bg-yellow-100 text-yellow-700",
   COMPLETED: "bg-gray-100 text-gray-500",
   CANCELLED: "bg-red-100 text-red-500",

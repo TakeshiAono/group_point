@@ -95,27 +95,31 @@ model Quest {
 
 /// クエストに紐づくサブクエスト。メンバーを割り当てて協力を募ることができる。
 model SubQuest {
-  id          String          @id @default(cuid())
-  questId     String
-  title       String
+  id                 String          @id @default(cuid())
+  questId            String
+  title              String
   /// 担当メンバー（GroupMember.id）任意
-  assigneeId  String?
-  status      SubQuestStatus  @default(REQUESTED)
+  assigneeId         String?
+  status             SubQuestStatus  @default(REQUESTED)
   /// サブクエスト報酬ポイント（クエスト合計を超えない）
-  pointReward Int             @default(0)
-  deadline    DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  pointReward        Int             @default(0)
+  /// 変更提案中の報酬（CHANGE_PENDING中のみ使用）
+  pendingPointReward Int?
+  deadline           DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
   quest      Quest           @relation(fields: [questId], references: [id], onDelete: Cascade)
   assignee   GroupMember?    @relation(fields: [assigneeId], references: [id])
 }
 
 enum SubQuestStatus {
-  REQUESTED   // 依頼中（初期状態）
-  ASSIGNED    // アサイン済み（担当者が了承）
-  IN_PROGRESS // 進行中
-  COMPLETED   // 完了
-  CANCELLED   // キャンセル
+  REQUESTED      // 依頼中（初期状態）
+  ASSIGNED       // アサイン済み（担当者が了承）
+  CHANGE_PENDING // 報酬変更承認待ち
+  CHANGE_DENIED  // 報酬変更否認
+  IN_PROGRESS    // 進行中
+  COMPLETED      // 完了
+  CANCELLED      // キャンセル
 }
 
 enum QuestType {
