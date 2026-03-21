@@ -52,13 +52,15 @@ export default function GroupAnalyticsPage() {
   const [loading, setLoading] = useState(true);
 
   // 上部（フィルター非依存）
-  const [baseAnalytics, setBaseAnalytics] = useState<AnalyticsData | null>(null);
+  const [basePieAnalytics, setBasePieAnalytics] = useState<AnalyticsData | null>(null);   // 円グラフ用（常に月単位）
+  const [topLineAnalytics, setTopLineAnalytics] = useState<AnalyticsData | null>(null);   // 折れ線グラフ用
   const [topGranularity, setTopGranularity] = useState<Granularity>("month");
   const [topBucket, setTopBucket] = useState<string>("current");
   const [topPieMode, setTopPieMode] = useState<TopPieMode>("points");
 
   // 下部（フィルター依存）
-  const [filteredAnalytics, setFilteredAnalytics] = useState<AnalyticsData | null>(null);
+  const [filteredPieAnalytics, setFilteredPieAnalytics] = useState<AnalyticsData | null>(null); // 円グラフ用（常に月単位）
+  const [bottomLineAnalytics, setBottomLineAnalytics] = useState<AnalyticsData | null>(null);   // 折れ線グラフ用
   const [bottomGranularity, setBottomGranularity] = useState<Granularity>("month");
   const [bottomBucket, setBottomBucket] = useState<string>("current");
   const [questTypeFilter, setQuestTypeFilter] = useState<Set<"GOVERNMENT" | "MEMBER">>(
@@ -122,13 +124,13 @@ export default function GroupAnalyticsPage() {
     }).finally(() => setLoading(false));
   }, [groupId]);
 
-  // 上部analytics（topGranularityが変わるたびに再フェッチ）
+  // 上部 円グラフ用（常に月単位、groupIdが変わるときのみ再フェッチ）
   useEffect(() => {
-    fetch(`/api/groups/${groupId}/analytics?questTypes=GOVERNMENT,MEMBER&granularity=${topGranularity}`)
+    fetch(`/api/groups/${groupId}/analytics?questTypes=GOVERNMENT,MEMBER&granularity=month`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (!data) return;
-        setBaseAnalytics(data);
+        setBasePieAnalytics(data);
         const buckets = Array.from(new Set([
           ...data.questTimeseries.map((x: { month: string }) => x.month),
           ...data.proposalTimeseries.map((x: { month: string }) => x.month),
@@ -136,16 +138,23 @@ export default function GroupAnalyticsPage() {
         setTopBucket((prev) => (prev === "current" || !buckets.includes(prev))
           ? (buckets[buckets.length - 1] ?? "current") : prev);
       });
+  }, [groupId]);
+
+  // 上部 折れ線グラフ用（topGranularityが変わるたびに再フェッチ）
+  useEffect(() => {
+    fetch(`/api/groups/${groupId}/analytics?questTypes=GOVERNMENT,MEMBER&granularity=${topGranularity}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setTopLineAnalytics(data); });
   }, [groupId, topGranularity]);
 
-  // 下部analytics（bottomGranularity・questTypeFilterが変わるたびに再フェッチ）
+  // 下部 円グラフ用（常に月単位、questTypeFilterが変わるときのみ再フェッチ）
   useEffect(() => {
     const questTypes = Array.from(questTypeFilter).join(",");
-    fetch(`/api/groups/${groupId}/analytics?questTypes=${questTypes}&granularity=${bottomGranularity}`)
+    fetch(`/api/groups/${groupId}/analytics?questTypes=${questTypes}&granularity=month`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (!data) return;
-        setFilteredAnalytics(data);
+        setFilteredPieAnalytics(data);
         const buckets = Array.from(new Set([
           ...data.questTimeseries.map((x: { month: string }) => x.month),
           ...data.proposalTimeseries.map((x: { month: string }) => x.month),
@@ -153,6 +162,14 @@ export default function GroupAnalyticsPage() {
         setBottomBucket((prev) => (prev === "current" || !buckets.includes(prev))
           ? (buckets[buckets.length - 1] ?? "current") : prev);
       });
+  }, [groupId, questTypeFilter]);
+
+  // 下部 折れ線グラフ用（bottomGranularity・questTypeFilterが変わるたびに再フェッチ）
+  useEffect(() => {
+    const questTypes = Array.from(questTypeFilter).join(",");
+    fetch(`/api/groups/${groupId}/analytics?questTypes=${questTypes}&granularity=${bottomGranularity}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setBottomLineAnalytics(data); });
   }, [groupId, questTypeFilter, bottomGranularity]);
 
   if (loading) return <div className="p-10 text-gray-500">読み込み中...</div>;
@@ -179,21 +196,22 @@ export default function GroupAnalyticsPage() {
     });
   }
 
+  // ── 上部データ（円グラフ：basePieAnalytics、折れ線：topLineAnalytics） ──
   const topAllBuckets = Array.from(new Set([
-    ...(baseAnalytics?.questTimeseries.map((x) => x.month) ?? []),
-    ...(baseAnalytics?.proposalTimeseries.map((x) => x.month) ?? []),
+    ...(basePieAnalytics?.questTimeseries.map((x) => x.month) ?? []),
+    ...(basePieAnalytics?.proposalTimeseries.map((x) => x.month) ?? []),
   ])).sort();
 
   let topPieData: PieEntry[] = [];
-  if (baseAnalytics) {
+  if (basePieAnalytics) {
     if (topPieMode === "points") {
-      topPieData = baseAnalytics.memberPointHistory
+      topPieData = basePieAnalytics.memberPointHistory
         .map((mp) => {
           const found = mp.history.find((h) => h.month === topBucket);
           return { id: mp.memberId, name: mp.name, value: found?.balance ?? 0, label: formatPoint(found?.balance ?? 0, pg) };
         }).sort((a, b) => b.value - a.value);
     } else {
-      topPieData = baseAnalytics.memberProposalHistory
+      topPieData = basePieAnalytics.memberProposalHistory
         .map((mp) => {
           const found = mp.history.find((h) => h.month === topBucket);
           return { id: mp.memberId, name: mp.name, value: found?.count ?? 0, label: `${found?.count ?? 0} 件` };
@@ -201,34 +219,34 @@ export default function GroupAnalyticsPage() {
     }
   }
 
-  const topLineRows = baseAnalytics
+  const topLineRows = topLineAnalytics
     ? topPieMode === "points"
-      ? buildLineRows(baseAnalytics.memberPointHistory, (h) => (h as { month: string; balance: number }).balance)
-      : buildLineRows(baseAnalytics.memberProposalHistory, (h) => (h as { month: string; count: number }).count)
+      ? buildLineRows(topLineAnalytics.memberPointHistory, (h) => (h as { month: string; balance: number }).balance)
+      : buildLineRows(topLineAnalytics.memberProposalHistory, (h) => (h as { month: string; count: number }).count)
     : [];
-  const topLineMembers = baseAnalytics
-    ? (topPieMode === "points" ? baseAnalytics.memberPointHistory : baseAnalytics.memberProposalHistory)
+  const topLineMembers = topLineAnalytics
+    ? (topPieMode === "points" ? topLineAnalytics.memberPointHistory : topLineAnalytics.memberProposalHistory)
     : [];
 
-  // ── 下部データ ─────────────────────────────────────────────
+  // ── 下部データ（円グラフ：filteredPieAnalytics、折れ線：bottomLineAnalytics） ──
   const bottomAllBuckets = Array.from(new Set([
-    ...(filteredAnalytics?.questTimeseries.map((x) => x.month) ?? []),
-    ...(filteredAnalytics?.proposalTimeseries.map((x) => x.month) ?? []),
+    ...(filteredPieAnalytics?.questTimeseries.map((x) => x.month) ?? []),
+    ...(filteredPieAnalytics?.proposalTimeseries.map((x) => x.month) ?? []),
   ])).sort();
 
   let completionPieData: PieEntry[] = [];
-  if (filteredAnalytics) {
-    completionPieData = filteredAnalytics.memberCompletionHistory
+  if (filteredPieAnalytics) {
+    completionPieData = filteredPieAnalytics.memberCompletionHistory
       .map((mp) => {
         const found = mp.history.find((h) => h.month === bottomBucket);
         return { id: mp.memberId, name: mp.name, value: found?.count ?? 0, label: `${found?.count ?? 0} 件` };
       }).filter((e) => e.value > 0).sort((a, b) => b.value - a.value);
   }
 
-  const completionLineRows = filteredAnalytics
-    ? buildLineRows(filteredAnalytics.memberCompletionHistory, (h) => (h as { month: string; count: number }).count)
+  const completionLineRows = bottomLineAnalytics
+    ? buildLineRows(bottomLineAnalytics.memberCompletionHistory, (h) => (h as { month: string; count: number }).count)
     : [];
-  const completionLineMembers = filteredAnalytics?.memberCompletionHistory ?? [];
+  const completionLineMembers = bottomLineAnalytics?.memberCompletionHistory ?? [];
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
