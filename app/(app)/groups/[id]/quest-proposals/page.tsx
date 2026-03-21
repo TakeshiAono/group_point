@@ -50,20 +50,10 @@ export default function QuestProposalsPage() {
   const [proposals, setProposals] = useState<QuestProposal[]>([]);
   const [myMember, setMyMember] = useState<GroupMember | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [visibleStatuses, setVisibleStatuses] = useState<Set<QuestProposal["status"]>>(
-    new Set(["PENDING"])
-  );
+  const [statusFilter, setStatusFilter] = useState<"ALL" | QuestProposal["status"]>("PENDING");
 
   const isAdmin = myMember?.role === "ADMIN" || myMember?.role === "LEADER";
   const isMemberOnly = myMember?.role === "MEMBER";
-
-  function toggleStatus(s: QuestProposal["status"]) {
-    setVisibleStatuses((prev) => {
-      const next = new Set(prev);
-      next.has(s) ? next.delete(s) : next.add(s);
-      return next;
-    });
-  }
 
   useEffect(() => {
     Promise.all([
@@ -80,12 +70,14 @@ export default function QuestProposalsPage() {
     });
   }, [groupId]);
 
-  const filtered = proposals.filter((p) => visibleStatuses.has(p.status));
+  const filtered = proposals.filter(
+    (p) => statusFilter === "ALL" || p.status === statusFilter
+  );
 
   function onProposalCreated(p: QuestProposal) {
     setProposals((prev) => [p, ...prev]);
     setShowForm(false);
-    setVisibleStatuses(new Set(["PENDING"]));
+    setStatusFilter("PENDING");
   }
 
   function onApproved(proposalId: string, updatedProposal: QuestProposal) {
@@ -103,16 +95,39 @@ export default function QuestProposalsPage() {
   return (
     <div>
       <main className="max-w-4xl mx-auto px-6 py-10 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="text-2xl font-bold text-gray-800">管理者へのクエスト提案</h2>
-          {isMemberOnly && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
-            >
-              + 提案する
-            </button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {(["PENDING", "APPROVED", "REJECTED", "ALL"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1.5 text-xs rounded-full border transition ${
+                  statusFilter === s
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "text-gray-600 border-gray-300 hover:border-blue-400"
+                }`}
+              >
+                {s === "ALL" ? "すべて" : STATUS_LABEL[s]}
+                {s !== "ALL" && (
+                  <span className="ml-1 opacity-70">
+                    {proposals.filter((p) => p.status === s).length}
+                  </span>
+                )}
+              </button>
+            ))}
+            {isMemberOnly && (
+              <>
+                <span className="w-px bg-gray-200 mx-1" />
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-full hover:bg-blue-700 transition"
+                >
+                  + 提案する
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* 提案フォーム（MEMBERのみ） */}
@@ -124,32 +139,11 @@ export default function QuestProposalsPage() {
           />
         )}
 
-        {/* ステータスフィルター */}
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs text-gray-400">表示:</span>
-          {(["PENDING", "APPROVED", "REJECTED"] as const).map((s) => (
-            <label key={s} className="flex items-center gap-1.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={visibleStatuses.has(s)}
-                onChange={() => toggleStatus(s)}
-                className="rounded"
-              />
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[s]}`}>
-                {STATUS_LABEL[s]}
-                <span className="ml-1 text-gray-400">
-                  {proposals.filter((p) => p.status === s).length}
-                </span>
-              </span>
-            </label>
-          ))}
-        </div>
-
         {/* 提案一覧 */}
         {filtered.length === 0 ? (
           <p className="text-gray-400 text-sm py-8 text-center">該当する提案がありません</p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-2">
             {filtered.map((p) => (
               <ProposalCard
                 key={p.id}
@@ -229,43 +223,34 @@ function ProposalCard({
   }
 
   const cardContent = (
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex-1">
-        <div className="flex items-center gap-2 mb-1">
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[proposal.status]}`}>
-            {STATUS_LABEL[proposal.status]}
-          </span>
-          <span className="text-xs text-gray-400">
-            提案者: {proposal.proposer?.user?.name ?? proposal.proposer?.user?.email ?? "不明"}
-          </span>
-          <span className="text-xs text-gray-400">
-            {new Date(proposal.createdAt).toLocaleDateString("ja-JP")}
-          </span>
-        </div>
-        <p className="font-medium text-gray-800">{proposal.title}</p>
-        {proposal.description && (
-          <p className="text-sm text-gray-500 mt-1">{proposal.description}</p>
-        )}
-        {proposal.status === "REJECTED" && proposal.rejectReason && (
-          <p className="text-xs text-red-500 mt-1 bg-red-50 px-2 py-1 rounded">
-            却下理由: {proposal.rejectReason}
-          </p>
-        )}
-        {proposal.status === "APPROVED" && proposal.questId && (
-          <p className="text-xs text-blue-500 mt-1">クリックしてクエスト詳細を見る →</p>
-        )}
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-2 mb-0.5">
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[proposal.status]}`}>
+          {STATUS_LABEL[proposal.status]}
+        </span>
+        <span className="text-xs text-gray-400">
+          提案者: {proposal.proposer?.user?.name ?? proposal.proposer?.user?.email ?? "不明"}
+        </span>
+        <span className="text-xs text-gray-400">
+          {new Date(proposal.createdAt).toLocaleDateString("ja-JP")}
+        </span>
       </div>
+      <p className="text-sm font-medium text-gray-800 truncate">{proposal.title}</p>
+      {proposal.status === "REJECTED" && proposal.rejectReason && (
+        <p className="text-xs text-red-500 mt-1">却下理由: {proposal.rejectReason}</p>
+      )}
     </div>
   );
 
   return (
-    <li className="bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition space-y-3">
+    <li className="bg-white border border-gray-200 rounded-xl px-5 py-3 hover:shadow-md hover:border-blue-200 transition space-y-3">
       {proposal.status === "APPROVED" && proposal.questId ? (
-        <Link href={`/groups/${groupId}/quests/${proposal.questId}`} className="block">
+        <Link href={`/groups/${groupId}/quests/${proposal.questId}`} className="flex items-center gap-4">
           {cardContent}
+          <span className="text-xs text-blue-500 shrink-0">詳細 →</span>
         </Link>
       ) : (
-        cardContent
+        <div className="flex items-center gap-4">{cardContent}</div>
       )}
 
       {/* 承認/却下アクション（ADMIN/LEADERのみ、PENDINGのみ） */}
