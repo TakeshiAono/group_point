@@ -39,7 +39,7 @@ type AnalyticsData = {
   memberProposalHistory: MemberHistory<{ month: string; count: number }>[];
 };
 
-type TopPieMode = "points" | "proposals";
+type ActiveTab = "points" | "proposals" | "completion";
 type Granularity = "month" | "week";
 
 // ─── 定数 ───────────────────────────────────────────────────
@@ -63,7 +63,7 @@ export default function GroupAnalyticsPage() {
   const [topLineAnalytics, setTopLineAnalytics] = useState<AnalyticsData | null>(null);
   const [topGranularity, setTopGranularity] = useState<Granularity>(() => loadStorage().topGranularity ?? "month");
   const [topBucket, setTopBucket] = useState<string>(() => loadStorage().topBucket ?? "current");
-  const [topPieMode, setTopPieMode] = useState<TopPieMode>(() => loadStorage().topPieMode ?? "points");
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => loadStorage().activeTab ?? "points");
 
   // 下部（フィルター依存）
   const [filteredPieAnalytics, setFilteredPieAnalytics] = useState<AnalyticsData | null>(null);
@@ -77,13 +77,13 @@ export default function GroupAnalyticsPage() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        topGranularity, topBucket, topPieMode,
+        topGranularity, topBucket, activeTab,
         bottomGranularity, bottomBucket,
         questTypes: Array.from(questTypeFilter),
       }));
     } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topGranularity, topBucket, topPieMode, bottomGranularity, bottomBucket, questTypeFilter]);
+  }, [topGranularity, topBucket, activeTab, bottomGranularity, bottomBucket, questTypeFilter]);
 
   function toggleQuestType(type: "GOVERNMENT" | "MEMBER") {
     setQuestTypeFilter((prev) => {
@@ -205,7 +205,7 @@ export default function GroupAnalyticsPage() {
 
   let topPieData: PieEntry[] = [];
   if (basePieAnalytics) {
-    if (topPieMode === "points") {
+    if (activeTab === "points") {
       topPieData = basePieAnalytics.memberPointHistory
         .map((mp) => {
           const found = mp.history.find((h) => h.month === topBucket);
@@ -221,12 +221,12 @@ export default function GroupAnalyticsPage() {
   }
 
   const topLineMembers = topLineAnalytics
-    ? topPieMode === "points"
+    ? activeTab === "points"
       ? renameSelf(topLineAnalytics.memberPointHistory)
       : renameSelf(topLineAnalytics.memberProposalHistory)
     : [];
   const topLineRows = topLineAnalytics
-    ? topPieMode === "points"
+    ? activeTab === "points"
       ? buildLineRows(renameSelf(topLineAnalytics.memberPointHistory), (h) => h.balance)
       : buildLineRows(renameSelf(topLineAnalytics.memberProposalHistory), (h) => h.count)
     : [];
@@ -263,63 +263,76 @@ export default function GroupAnalyticsPage() {
         <h2 className="text-2xl font-bold text-gray-800">グループ分析</h2>
       </div>
 
-      {/* 上部：フィルター非依存 */}
-      <div className="border border-gray-200 rounded-2xl p-5 space-y-3 bg-gray-50">
-        <p className="text-xs text-gray-400">クエスト種別に関係なく集計</p>
-        <AnalysisSection
-          title={topPieMode === "points" ? "保有ポイント" : "提案数"}
-          toggleButtons={
-            <div className="flex gap-1.5">
-              {(["points", "proposals"] as const).map((mode) => (
-                <button key={mode} onClick={() => setTopPieMode(mode)}
-                  className={`px-3 py-1 text-xs rounded-full border transition ${topPieMode === mode ? "bg-blue-600 text-white border-blue-600" : "text-gray-600 border-gray-300 hover:border-blue-400"}`}>
-                  {mode === "points" ? "保有ポイント" : "提案数"}
-                </button>
+      {/* タブ */}
+      <div>
+        {/* タブバー */}
+        <div className="flex border-b border-gray-200">
+          {([
+            { key: "points",     label: "保有ポイント" },
+            { key: "proposals",  label: "提案数" },
+            { key: "completion", label: "クエスト完了数" },
+          ] as const).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`px-5 py-2.5 text-sm font-medium border-b-2 transition -mb-px ${
+                activeTab === key
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* タブコンテンツ */}
+        <div className="border border-t-0 border-gray-200 rounded-b-2xl p-5 space-y-3 bg-gray-50">
+          {activeTab === "completion" && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xs text-gray-400">クエスト種別フィルター</span>
+              {(["GOVERNMENT", "MEMBER"] as const).map((type) => (
+                <label key={type} className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={questTypeFilter.has(type)} onChange={() => toggleQuestType(type)}
+                    className="w-3.5 h-3.5 accent-blue-600" />
+                  <span className="text-xs text-gray-700">{type === "GOVERNMENT" ? "管理側" : "メンバー"}</span>
+                </label>
               ))}
             </div>
-          }
-          allBuckets={topAllBuckets}
-          selectedBucket={topBucket}
-          onBucketChange={setTopBucket}
-          granularity={topGranularity}
-          onGranularityChange={(g) => setTopGranularity(g)}
-          pieData={topPieData}
-          formatPieValue={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
-          lineRows={topLineRows}
-          lineMembers={topLineMembers}
-          formatLineTooltip={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
-          myMemberId={myMemberId}
-        />
-      </div>
+          )}
 
-      {/* 下部：フィルター依存 */}
-      <div className="border border-gray-200 rounded-2xl p-5 space-y-3 bg-gray-50">
-        <div className="flex items-center gap-4 flex-wrap">
-          <p className="text-xs text-gray-400">クエスト種別でフィルター</p>
-          <div className="flex items-center gap-3 ml-auto">
-            {(["GOVERNMENT", "MEMBER"] as const).map((type) => (
-              <label key={type} className="flex items-center gap-1.5 cursor-pointer">
-                <input type="checkbox" checked={questTypeFilter.has(type)} onChange={() => toggleQuestType(type)}
-                  className="w-3.5 h-3.5 accent-blue-600" />
-                <span className="text-xs text-gray-700">{type === "GOVERNMENT" ? "管理側" : "メンバー"}</span>
-              </label>
-            ))}
-          </div>
+          {activeTab !== "completion" ? (
+            <AnalysisSection
+              title={activeTab === "points" ? "保有ポイント" : "提案数"}
+              allBuckets={topAllBuckets}
+              selectedBucket={topBucket}
+              onBucketChange={setTopBucket}
+              granularity={topGranularity}
+              onGranularityChange={(g) => setTopGranularity(g)}
+              pieData={topPieData}
+              formatPieValue={(v) => activeTab === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
+              lineRows={topLineRows}
+              lineMembers={topLineMembers}
+              formatLineTooltip={(v) => activeTab === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
+              myMemberId={myMemberId}
+            />
+          ) : (
+            <AnalysisSection
+              title="クエスト完了数"
+              allBuckets={bottomAllBuckets}
+              selectedBucket={bottomBucket}
+              onBucketChange={setBottomBucket}
+              granularity={bottomGranularity}
+              onGranularityChange={(g) => setBottomGranularity(g)}
+              pieData={completionPieData}
+              formatPieValue={(v) => `${v} 件`}
+              lineRows={completionLineRows}
+              lineMembers={completionLineMembers}
+              formatLineTooltip={(v) => `${v} 件`}
+              myMemberId={myMemberId}
+            />
+          )}
         </div>
-        <AnalysisSection
-          title="クエスト完了数"
-          allBuckets={bottomAllBuckets}
-          selectedBucket={bottomBucket}
-          onBucketChange={setBottomBucket}
-          granularity={bottomGranularity}
-          onGranularityChange={(g) => setBottomGranularity(g)}
-          pieData={completionPieData}
-          formatPieValue={(v) => `${v} 件`}
-          lineRows={completionLineRows}
-          lineMembers={completionLineMembers}
-          formatLineTooltip={(v) => `${v} 件`}
-          myMemberId={myMemberId}
-        />
       </div>
     </div>
   );
@@ -331,7 +344,7 @@ type LineRow = Record<string, string | number>;
 type LineMember = { memberId: string; name: string };
 
 function AnalysisSection({
-  title, toggleButtons,
+  title,
   allBuckets, selectedBucket, onBucketChange,
   granularity, onGranularityChange,
   pieData, formatPieValue,
@@ -339,7 +352,6 @@ function AnalysisSection({
   myMemberId,
 }: {
   title: string;
-  toggleButtons?: React.ReactNode;
   allBuckets: string[];
   selectedBucket: string;
   onBucketChange: (v: string) => void;
@@ -368,7 +380,6 @@ function AnalysisSection({
       {/* タイトル行 */}
       <div className="flex items-center gap-3 flex-wrap">
         <SubTitle>{title}</SubTitle>
-        {toggleButtons}
       </div>
 
       {/* 円グラフ */}
