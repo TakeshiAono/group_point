@@ -59,6 +59,9 @@ export default function GroupDetailPage() {
   const myMember = group.members.find((m) => m.user.id === myUserId);
   const myRole = myMember?.role ?? "MEMBER";
 
+  const admins = group.members.filter((m) => m.role === "ADMIN");
+  const leaders = group.members.filter((m) => m.role === "LEADER");
+  const regularMembers = group.members.filter((m) => m.role === "MEMBER");
   const totalCirculating = group.members.reduce((sum, m) => sum + m.memberPoints, 0);
 
   function removeMember(removedId: string) {
@@ -115,14 +118,32 @@ export default function GroupDetailPage() {
           />
         )}
 
-        {/* メンバー一覧（全員） */}
+        {/* 管理人 */}
         <MemberSection
-          title="メンバー"
-          members={group.members}
+          title="管理人"
+          members={admins}
+          groupId={id}
+          canDelete={canDelete}
+          onRemoved={removeMember}
+        />
+
+        {/* 政府関係者 */}
+        <MemberSection
+          title="政府関係者"
+          members={leaders}
           groupId={id}
           canDelete={canDelete}
           onRemoved={removeMember}
           inviteLeaderRole={myRole === "ADMIN" ? "LEADER" : undefined}
+        />
+
+        {/* メンバー */}
+        <MemberSection
+          title="メンバー"
+          members={regularMembers}
+          groupId={id}
+          canDelete={canDelete}
+          onRemoved={removeMember}
           inviteMemberRole={myRole === "ADMIN" || myRole === "LEADER" ? "MEMBER" : undefined}
         />
 
@@ -225,11 +246,6 @@ function MemberRow({
         </span>
         {member.user.name && (
           <span className="text-xs text-gray-400">{member.user.email}</span>
-        )}
-        {member.role !== "MEMBER" && (
-          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${ROLE_BADGE[member.role]}`}>
-            {ROLE_LABEL[member.role]}
-          </span>
         )}
       </div>
       <div className="flex items-center gap-3">
