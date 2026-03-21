@@ -46,6 +46,22 @@ model Group {
   invitations       Invitation[]
 }
 
+/// クエストの変更ログ
+model QuestLog {
+  id        String      @id @default(cuid())
+  questId   String
+  memberId  String?
+  /// ログの種別（例: ACCEPTED, COMPLETED, SUBQUEST_ADDED, BONUS_RULE_ADDED 等）
+  action    String
+  /// 人間が読める変更内容の説明
+  detail    String
+  createdAt DateTime    @default(now())
+  quest     Quest       @relation(fields: [questId], references: [id], onDelete: Cascade)
+  member    GroupMember? @relation(fields: [memberId], references: [id])
+
+  @@index([questId])
+}
+
 /// 早期/遅延完了ボーナス・ペナルティルール（クエスト個別設定）
 /// thresholdPercent: 作成日〜納期の期間に対する完了タイミングの割合(%)
 ///   例: 80 → 期間の80%以内に完了でボーナス対象
@@ -79,6 +95,7 @@ model GroupMember {
   completedQuests Quest[]      @relation("QuestCompleter")
   subQuests       SubQuest[]
   sentInvitations Invitation[]
+  questLogs       QuestLog[]
 
   @@unique([userId, groupId])
 }
@@ -115,6 +132,7 @@ model Quest {
   completer   GroupMember? @relation("QuestCompleter", fields: [completerId], references: [id])
   subQuests   SubQuest[]
   bonusRules  BonusRule[]
+  logs        QuestLog[]
 }
 
 /// クエストに紐づくサブクエスト。メンバーを割り当てて協力を募ることができる。

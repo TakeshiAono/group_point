@@ -78,6 +78,7 @@ export default function QuestDetailPage() {
   const [appliedBonus, setAppliedBonus] = useState<{ thresholdPercent: number; bonusRate: number } | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState("");
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -103,6 +104,10 @@ export default function QuestDetailPage() {
 
   const canManageSubQuest =
     myMember && (quest.creator.id === myMember.id || quest.completer?.id === myMember.id);
+
+  const canEdit =
+    myMember && quest.creator.id === myMember.id &&
+    quest.status !== "COMPLETED" && quest.status !== "CANCELLED";
 
   const canAccept =
     myMember && quest.status === "OPEN" && quest.creator.id !== myMember.id;
@@ -148,10 +153,14 @@ export default function QuestDetailPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10 space-y-6">
+    <div className="max-w-6xl mx-auto px-6 py-10">
       <Link href={`/groups/${groupId}/quests`} className="text-sm text-gray-400 hover:text-gray-600 transition">
         ← 案件一覧に戻る
       </Link>
+
+      <div className="flex gap-6 mt-6 items-start">
+        {/* 左: メインコンテンツ */}
+        <div className="flex-1 min-w-0 space-y-6">
 
       {/* クエスト詳細 */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
@@ -165,11 +174,30 @@ export default function QuestDetailPage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-bold text-gray-800">{quest.title}</h2>
-          {quest.description && (
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="text-xl font-bold text-gray-800">{quest.title}</h2>
+            {canEdit && (
+              <button
+                onClick={() => setEditing((v) => !v)}
+                className="shrink-0 text-xs text-gray-400 hover:text-blue-600 transition border border-gray-200 rounded px-2 py-0.5"
+              >
+                {editing ? "キャンセル" : "編集"}
+              </button>
+            )}
+          </div>
+          {quest.description && !editing && (
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">{quest.description}</p>
           )}
         </div>
+
+        {editing && (
+          <EditQuestForm
+            groupId={groupId}
+            quest={quest}
+            onSaved={(updated) => { setQuest(updated); setEditing(false); }}
+            onCancel={() => setEditing(false)}
+          />
+        )}
 
         <div className="flex items-center gap-2 py-3 border-t border-gray-100">
           <span className="text-sm text-gray-500">報酬</span>
@@ -324,6 +352,13 @@ export default function QuestDetailPage() {
         )}
       </div>
 
+        </div>{/* 左カラム終了 */}
+
+        {/* 右: アクティビティログ */}
+        <div className="w-80 shrink-0 sticky top-6">
+          <QuestLogSection groupId={groupId} questId={questId} />
+        </div>
+      </div>{/* flex終了 */}
     </div>
   );
 }
@@ -598,6 +633,157 @@ function AddSubQuestForm({
       >
         {submitting ? "追加中..." : "追加する"}
       </button>
+    </form>
+  );
+}
+
+type QuestLogEntry = {
+  id: string;
+  action: string;
+  detail: string;
+  createdAt: string;
+  memberName: string | null;
+  memberEmail: string | null;
+};
+
+function QuestLogSection({ groupId, questId }: { groupId: string; questId: string }) {
+  const [logs, setLogs] = useState<QuestLogEntry[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/groups/${groupId}/quests/${questId}/logs`)
+      .then((r) => r.ok ? r.json() : [])
+      .then(setLogs);
+  }, [groupId, questId]);
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col" style={{ height: "60vh" }}>
+      <h3 className="font-semibold text-gray-800 mb-3 shrink-0">アクティビティログ</h3>
+      {logs.length === 0 ? (
+        <p className="text-sm text-gray-400">まだ記録がありません</p>
+      ) : (
+        <ul className="space-y-3 overflow-y-auto flex-1 pr-1">
+          {logs.map((log) => (
+            <li key={log.id} className="flex items-start gap-2 text-sm">
+              <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-700 break-words">{log.detail}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {log.memberName ?? log.memberEmail ?? "システム"}
+                  　{new Date(log.createdAt).toLocaleString("ja-JP")}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function EditQuestForm({
+  groupId,
+  quest,
+  onSaved,
+  onCancel,
+}: {
+  groupId: string;
+  quest: Quest;
+  onSaved: (updated: Quest) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState(quest.title);
+  const [description, setDescription] = useState(quest.description ?? "");
+  const [pointReward, setPointReward] = useState(quest.pointReward);
+  const [deadline, setDeadline] = useState(
+    quest.deadline ? new Date(quest.deadline).toISOString().slice(0, 10) : ""
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/groups/${groupId}/quests/${quest.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description: description || null,
+          pointReward,
+          deadline: deadline || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "保存に失敗しました");
+        return;
+      }
+      onSaved(data);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3 border-t border-gray-100 pt-4">
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">タイトル</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">説明</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 resize-none"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">報酬（pt）</label>
+        <input
+          type="number"
+          value={pointReward}
+          onChange={(e) => setPointReward(Number(e.target.value))}
+          min={1}
+          required
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">期限</label>
+        <input
+          type="date"
+          value={deadline}
+          onChange={(e) => setDeadline(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+        />
+      </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <div className="flex gap-2 pt-1">
+        <button
+          type="submit"
+          disabled={saving}
+          className="flex-1 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+        >
+          {saving ? "保存中..." : "保存"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 py-2 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition"
+        >
+          キャンセル
+        </button>
+      </div>
     </form>
   );
 }

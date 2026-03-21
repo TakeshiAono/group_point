@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { addQuestLog } from "@/lib/questLog";
 
 type Params = { params: Promise<{ id: string; questId: string; subQuestId: string }> };
 
@@ -61,6 +62,8 @@ export async function POST(_req: Request, { params }: Params) {
       },
     },
   });
+
+  await addQuestLog({ questId, memberId: member.id, action: "REWARD_CHANGE_APPROVED", detail: `サブクエスト「${updated.title}」の報酬変更が承認されました（${subQuest.pointReward} pt → ${updated.pointReward} pt）` });
 
   return NextResponse.json(updated);
 }
