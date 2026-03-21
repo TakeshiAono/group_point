@@ -2,6 +2,7 @@ export type PointGroup = {
   pointUnit: string;
   laborCostPerHour: number;
   timeUnit: string;
+  displayMultiplier?: number;
 };
 
 export const TIME_UNIT_LABEL: Record<string, string> = {
@@ -20,15 +21,17 @@ const TIME_UNIT_MULTIPLIER: Record<string, number> = {
 };
 
 export function formatPoint(points: number, group: PointGroup): string {
+  const multiplier = group.displayMultiplier ?? 1;
+  const displayed = points * multiplier;
   if (group.pointUnit === "円") {
     if (group.timeUnit === "YEN" || !group.laborCostPerHour) {
-      return `${points.toLocaleString("ja-JP")} 円`;
+      return `${displayed.toLocaleString("ja-JP")} 円`;
     }
-    const personHours = points / group.laborCostPerHour;
+    const personHours = displayed / group.laborCostPerHour;
     const value = personHours * (TIME_UNIT_MULTIPLIER[group.timeUnit] ?? 1);
     return `${value.toLocaleString("ja-JP")} ${TIME_UNIT_LABEL[group.timeUnit]}`;
   }
-  return `${points} pt`;
+  return `${displayed} pt`;
 }
 
 export function unitLabel(group: PointGroup): string {

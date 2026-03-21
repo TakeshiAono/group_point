@@ -16,18 +16,18 @@ export async function PATCH(
 
   const { id: groupId } = await params;
   const body = await req.json();
-  const { delta, pointUnit, laborCostPerHour, timeUnit, proposalReward } = body;
+  const { delta, pointUnit, laborCostPerHour, timeUnit, proposalReward, displayMultiplier } = body;
 
   // グループ表示設定の更新（ADMINのみ）/ 提案報酬設定（ADMIN/LEADER）
-  if (pointUnit !== undefined || laborCostPerHour !== undefined || timeUnit !== undefined || proposalReward !== undefined) {
+  if (pointUnit !== undefined || laborCostPerHour !== undefined || timeUnit !== undefined || proposalReward !== undefined || displayMultiplier !== undefined) {
     const operator = await prisma.groupMember.findUnique({
       where: { userId_groupId: { userId: session.user.id, groupId } },
     });
     if (!operator || operator.role === "MEMBER") {
       return NextResponse.json({ error: "設定変更はADMIN・LEADERのみ実行できます" }, { status: 403 });
     }
-    // 表示設定（pointUnit / laborCostPerHour / timeUnit）はADMINのみ
-    if ((pointUnit !== undefined || laborCostPerHour !== undefined || timeUnit !== undefined) && operator.role !== "ADMIN") {
+    // 表示設定（pointUnit / laborCostPerHour / timeUnit / displayMultiplier）はADMINのみ
+    if ((pointUnit !== undefined || laborCostPerHour !== undefined || timeUnit !== undefined || displayMultiplier !== undefined) && operator.role !== "ADMIN") {
       return NextResponse.json({ error: "表示設定変更はADMINのみ実行できます" }, { status: 403 });
     }
     const data: Record<string, unknown> = {};
@@ -55,8 +55,19 @@ export async function PATCH(
       }
       data.timeUnit = timeUnit;
     }
-    const updated = await prisma.group.update({ where: { id: groupId }, data });
-    return NextResponse.json(updated);
+    if (displayMultiplier !== undefined) {
+      if (typeof displayMultiplier !== "number" || displayMultiplier <= 0) {
+        return NextResponse.json({ error: "倍率は0より大きい数値で指定してください" }, { status: 400 });
+      }
+      data.displayMultiplier = displayMultiplier;
+    }
+    try {
+      const updated = await prisma.group.update({ where: { id: groupId }, data });
+      return NextResponse.json(updated);
+    } catch (e) {
+      console.error("group update error:", e);
+      return NextResponse.json({ error: String(e) }, { status: 500 });
+    }
   }
 
   if (typeof delta !== "number" || !Number.isInteger(delta) || delta === 0) {

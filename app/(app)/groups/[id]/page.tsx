@@ -22,6 +22,7 @@ type Group = {
   laborCostPerHour: number;
   timeUnit: string;
   proposalReward: number;
+  displayMultiplier: number;
   members: Member[];
 };
 
@@ -58,16 +59,18 @@ function inputUnitLabel(group: Pick<Group, "pointUnit" | "laborCostPerHour" | "t
 }
 
 // ポイントを表示用にフォーマット
-function formatPoint(points: number, group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">): string {
+function formatPoint(points: number, group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit" | "displayMultiplier">): string {
+  const multiplier = group.displayMultiplier ?? 1;
+  const displayed = points * multiplier;
   if (group.pointUnit === "円") {
     if (group.timeUnit === "YEN" || !group.laborCostPerHour) {
-      return `${points.toLocaleString("ja-JP")} 円`;
+      return `${displayed.toLocaleString("ja-JP")} 円`;
     }
-    const personHours = points / group.laborCostPerHour; // 円 ÷ 人件費 = 人・時間
+    const personHours = displayed / group.laborCostPerHour;
     const value = personHours * (TIME_UNIT_MULTIPLIER[group.timeUnit] ?? 1);
     return `${value.toLocaleString("ja-JP")} ${TIME_UNIT_LABEL[group.timeUnit]}`;
   }
-  return `${points} pt`;
+  return `${displayed} pt`;
 }
 
 type Quest = {
@@ -387,15 +390,16 @@ function IssuedPointsEditor({
   totalIssuedPoints: number;
   totalCirculating: number;
   isAdmin: boolean;
-  group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
+  group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit" | "displayMultiplier">;
   onUpdated: (v: number) => void;
-  onSettingsUpdated: (s: Partial<Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">>) => void;
+  onSettingsUpdated: (s: Partial<Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit" | "displayMultiplier">>) => void;
 }) {
   const reclaimable = totalIssuedPoints - totalCirculating;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pointUnit, setPointUnit] = useState(group.pointUnit);
   const [laborCost, setLaborCost] = useState(group.laborCostPerHour);
   const [timeUnit, setTimeUnit] = useState(group.timeUnit);
+  const [displayMultiplier, setDisplayMultiplier] = useState(group.displayMultiplier ?? 1);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsError, setSettingsError] = useState("");
 
@@ -428,11 +432,12 @@ function IssuedPointsEditor({
       const res = await fetch(`/api/groups/${groupId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pointUnit, laborCostPerHour: laborCost, timeUnit }),
+        body: JSON.stringify({ pointUnit, laborCostPerHour: laborCost, timeUnit, displayMultiplier }),
       });
-      const data = await res.json();
-      if (!res.ok) { setSettingsError(data.error ?? "エラーが発生しました"); return; }
-      onSettingsUpdated({ pointUnit: data.pointUnit, laborCostPerHour: data.laborCostPerHour, timeUnit: data.timeUnit });
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!res.ok) { setSettingsError(data.error ?? `エラー (${res.status})`); return; }
+      onSettingsUpdated({ pointUnit: data.pointUnit, laborCostPerHour: data.laborCostPerHour, timeUnit: data.timeUnit, displayMultiplier: data.displayMultiplier });
       setSettingsOpen(false);
     } finally {
       setSettingsSaving(false);
@@ -499,6 +504,17 @@ function IssuedPointsEditor({
                 />
               </div>
             )}
+            <div>
+              <p className="text-xs text-gray-500 mb-1">表示倍率</p>
+              <input
+                type="number"
+                min={0.01}
+                step="any"
+                value={displayMultiplier}
+                onChange={(e) => setDisplayMultiplier(Number(e.target.value))}
+                className="w-24 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
             <div className="flex gap-2">
               <button
                 type="submit"
@@ -518,7 +534,7 @@ function IssuedPointsEditor({
           </div>
           {pointUnit === "円" && (
             <p className="text-xs text-gray-400">
-              例: 1200 pt → {formatPoint(1200, { pointUnit: "円", laborCostPerHour: laborCost, timeUnit })}
+              例: 1200 pt → {formatPoint(1200, { pointUnit: "円", laborCostPerHour: laborCost, timeUnit, displayMultiplier })}
             </p>
           )}
           {settingsError && <p className="text-xs text-red-600">{settingsError}</p>}
@@ -604,7 +620,7 @@ function GrantPointsSection({
   groupId: string;
   members: Member[];
   onGranted: (memberId: string | null, amount: number) => void;
-  group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
+  group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit" | "displayMultiplier">;
 }) {
   const [mode, setMode] = useState<"individual" | "multiple" | "all">("individual");
   const [selectedMemberId, setSelectedMemberId] = useState(members[0]?.id ?? "");
@@ -780,7 +796,7 @@ function DeltaForm({
   maxPt?: number;
   sign: 1 | -1;
   onSubmit: (delta: number, amount: number, setError: (e: string) => void, setSaving: (b: boolean) => void, setAmount: (v: number) => void) => void;
-  group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
+  group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit" | "displayMultiplier">;
 }) {
   const [amount, setAmount] = useState(0);
   const [saving, setSaving] = useState(false);

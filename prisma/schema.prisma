@@ -41,6 +41,8 @@ model Group {
   timeUnit          String        @default("HOUR")
   /// クエスト提案が承認されたときに提案者へ付与する一律報酬ポイント
   proposalReward    Int           @default(0)
+  /// 表示時にポイント値へかける倍率（例: 10なら内部値×10で表示）
+  displayMultiplier Float         @default(1)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   members           GroupMember[]
