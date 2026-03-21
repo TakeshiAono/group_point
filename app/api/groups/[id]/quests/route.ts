@@ -67,15 +67,13 @@ export async function POST(
     }
 
     // 政府の未割当ポイントを計算
-    // 未割当 = 発行済み - 流通中 - 既存のオープン政府案件の報酬合計
+    // 未割当 = 残り予算（totalIssuedPoints）- 既存のオープン政府案件の報酬合計
     const group = await prisma.group.findUnique({ where: { id: groupId } });
-    const members = await prisma.groupMember.findMany({ where: { groupId } });
-    const totalCirculating = members.reduce((sum, m) => sum + m.memberPoints, 0);
     const activeGovQuests = await prisma.quest.findMany({
       where: { groupId, questType: "GOVERNMENT", status: { in: ["OPEN", "IN_PROGRESS"] } },
     });
     const allocated = activeGovQuests.reduce((sum, q) => sum + q.pointReward, 0);
-    const available = group!.totalIssuedPoints - totalCirculating - allocated;
+    const available = group!.totalIssuedPoints - allocated;
 
     if (pointReward > available) {
       return NextResponse.json(
