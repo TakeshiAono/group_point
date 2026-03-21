@@ -666,7 +666,7 @@ function GrantPointsSection({
 
   return (
     <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
-      <h3 className="font-semibold text-gray-800">ポイント付与（ADMIN）</h3>
+      <h3 className="font-semibold text-gray-800">ポイント付与</h3>
 
       <div className="flex gap-4">
         <label className="flex items-center gap-2 cursor-pointer text-sm">
