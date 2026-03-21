@@ -265,11 +265,14 @@ export default function QuestDetailPage() {
         )}
 
         {/* ボーナス/ペナルティ適用通知 */}
-        {appliedBonus && (
+        {appliedBonus && quest.deadline && (
           <div className={`border-t border-gray-100 pt-4 rounded-lg px-4 py-3 text-sm ${appliedBonus.bonusRate > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
-            {appliedBonus.bonusRate > 0
-              ? `🎉 期間の ${appliedBonus.thresholdPercent}% 以内に完了！ボーナス +${appliedBonus.bonusRate}% が適用されました`
-              : `⚠️ 期間の ${appliedBonus.thresholdPercent}% 経過後の完了。ペナルティ ${appliedBonus.bonusRate}% が適用されました`}
+            {(() => {
+              const date = calcThresholdDate(quest.createdAt, quest.deadline, appliedBonus.thresholdPercent).toLocaleDateString("ja-JP");
+              return appliedBonus.bonusRate > 0
+                ? `🎉 期限（${date}）以内に完了！ボーナス +${appliedBonus.bonusRate}% が適用されました`
+                : `⚠️ 期限（${date}）以降の完了。ペナルティ ${appliedBonus.bonusRate}% が適用されました`;
+            })()}
           </div>
         )}
       </div>
@@ -280,6 +283,8 @@ export default function QuestDetailPage() {
           groupId={groupId}
           questId={questId}
           canEdit={quest.creator.id === myMember.id}
+          questCreatedAt={quest.createdAt}
+          questDeadline={quest.deadline}
         />
       )}
 
@@ -365,7 +370,19 @@ export default function QuestDetailPage() {
 
 type BonusRule = { id: string; thresholdPercent: number; bonusRate: number };
 
-function BonusRulesSection({ groupId, questId, canEdit }: { groupId: string; questId: string; canEdit: boolean }) {
+function calcThresholdDate(createdAt: string, deadline: string, thresholdPercent: number): Date {
+  const start = new Date(createdAt).getTime();
+  const end = new Date(deadline).getTime();
+  const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+  const days = Math.ceil(totalDays * thresholdPercent / 100);
+  return new Date(start + days * 24 * 60 * 60 * 1000);
+}
+
+function BonusRulesSection({
+  groupId, questId, canEdit, questCreatedAt, questDeadline,
+}: {
+  groupId: string; questId: string; canEdit: boolean; questCreatedAt: string; questDeadline: string;
+}) {
   const [rules, setRules] = useState<BonusRule[]>([]);
   const [threshold, setThreshold] = useState<number | "">("");
   const [rate, setRate] = useState<number | "">("");
@@ -419,13 +436,19 @@ function BonusRulesSection({ groupId, questId, canEdit }: { groupId: string; que
         <ul className="space-y-2">
           {rules.map((r) => (
             <li key={r.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2 text-sm">
-              <div className="flex items-center gap-3">
-                <span className="text-gray-600">
-                  期間の <span className="font-bold text-gray-800">{r.thresholdPercent}%</span>{" "}
-                  {r.bonusRate > 0 ? "以内に完了" : "以降に完了"}
-                </span>
-                <span className={`font-bold ${r.bonusRate > 0 ? "text-green-600" : "text-red-500"}`}>
-                  {r.bonusRate > 0 ? `+${r.bonusRate}%` : `${r.bonusRate}%`}
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-3">
+                  <span className="text-gray-600">
+                    {r.bonusRate > 0 ? "以内に完了" : "以降に完了"}
+                  </span>
+                  <span className={`font-bold ${r.bonusRate > 0 ? "text-green-600" : "text-red-500"}`}>
+                    {r.bonusRate > 0 ? `+${r.bonusRate}%` : `${r.bonusRate}%`}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-400">
+                  {r.thresholdPercent}%（
+                  {calcThresholdDate(questCreatedAt, questDeadline, r.thresholdPercent).toLocaleDateString("ja-JP")}
+                  ）
                 </span>
               </div>
               {canEdit && (

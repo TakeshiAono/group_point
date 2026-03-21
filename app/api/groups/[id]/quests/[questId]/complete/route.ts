@@ -87,21 +87,24 @@ export async function POST(_req: Request, { params }: Params) {
     const now = new Date();
     const createdAt = quest.createdAt;
     const deadline = quest.deadline;
-    const totalDuration = deadline.getTime() - createdAt.getTime();
+    const totalDays = Math.ceil((deadline.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (totalDuration > 0) {
-      const elapsed = now.getTime() - createdAt.getTime();
-      const elapsedPercent = (elapsed / totalDuration) * 100;
-
+    if (totalDays > 0) {
       // クエストのボーナスルールを取得
       const rules = await prisma.$queryRaw<
         { id: string; thresholdPercent: number; bonusRate: number }[]
       >`SELECT id, "thresholdPercent", "bonusRate" FROM "BonusRule" WHERE "questId" = ${questId} ORDER BY "thresholdPercent" ASC`;
 
-      // 早期完了ボーナス: elapsed% <= threshold の中で最も低いthreshold（最高の達成）
-      const bonusRules = rules.filter((r) => r.bonusRate > 0 && elapsedPercent <= r.thresholdPercent);
-      // 遅延ペナルティ: elapsed% >= threshold の中で最も高いthreshold（最も遅れた段階）
-      const penaltyRules = rules.filter((r) => r.bonusRate < 0 && elapsedPercent >= r.thresholdPercent);
+      // しきい値日付を切り上げで計算
+      function thresholdDate(thresholdPercent: number): Date {
+        const days = Math.ceil(totalDays * thresholdPercent / 100);
+        return new Date(createdAt.getTime() + days * 24 * 60 * 60 * 1000);
+      }
+
+      // 早期完了ボーナス: now <= thresholdDate の中で最も低いthreshold（最高の達成）
+      const bonusRules = rules.filter((r) => r.bonusRate > 0 && now <= thresholdDate(r.thresholdPercent));
+      // 遅延ペナルティ: now >= thresholdDate の中で最も高いthreshold（最も具体的なペナルティ）
+      const penaltyRules = rules.filter((r) => r.bonusRate < 0 && now >= thresholdDate(r.thresholdPercent));
 
       if (bonusRules.length > 0) {
         appliedRule = bonusRules[0]; // 最低threshold = 最高ボーナス
