@@ -39,7 +39,7 @@ export async function POST(
   }
 
   const { id: groupId } = await params;
-  const { title, description, pointReward, questType } = await req.json();
+  const { title, description, pointReward, questType, deadline } = await req.json();
 
   if (!title?.trim()) {
     return NextResponse.json({ error: "タイトルは必須です" }, { status: 400 });
@@ -84,7 +84,7 @@ export async function POST(
     }
 
     const quest = await prisma.quest.create({
-      data: { groupId, creatorId: creatorMember.id, title: title.trim(), description: description?.trim() ?? null, pointReward, questType: "GOVERNMENT" },
+      data: { groupId, creatorId: creatorMember.id, title: title.trim(), description: description?.trim() ?? null, pointReward, questType: "GOVERNMENT", deadline: deadline ? new Date(deadline) : null },
       include: {
         creator: { include: { user: { select: { id: true, name: true, email: true } } } },
         completer: { include: { user: { select: { id: true, name: true, email: true } } } },
@@ -104,7 +104,7 @@ export async function POST(
 
   const [quest] = await prisma.$transaction([
     prisma.quest.create({
-      data: { groupId, creatorId: creatorMember.id, title: title.trim(), description: description?.trim() ?? null, pointReward, questType: "MEMBER" },
+      data: { groupId, creatorId: creatorMember.id, title: title.trim(), description: description?.trim() ?? null, pointReward, questType: "MEMBER", deadline: deadline ? new Date(deadline) : null },
       include: {
         creator: { include: { user: { select: { id: true, name: true, email: true } } } },
         completer: { include: { user: { select: { id: true, name: true, email: true } } } },

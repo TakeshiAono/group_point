@@ -54,6 +54,7 @@ model GroupMember {
   group        Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
   createdQuests   Quest[]      @relation("QuestCreator")
   completedQuests Quest[]      @relation("QuestCompleter")
+  subQuests       SubQuest[]
   sentInvitations Invitation[]
 
   @@unique([userId, groupId])
@@ -82,11 +83,28 @@ model Quest {
   status      QuestStatus  @default(OPEN)
   /// 依頼完了者（GroupMember.id）
   completerId String?
+  /// 締め切り日時（任意）
+  deadline    DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   group       Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
   creator     GroupMember  @relation("QuestCreator", fields: [creatorId], references: [id])
   completer   GroupMember? @relation("QuestCompleter", fields: [completerId], references: [id])
+  subQuests   SubQuest[]
+}
+
+/// クエストに紐づくサブクエスト。メンバーを割り当てて協力を募ることができる。
+model SubQuest {
+  id         String      @id @default(cuid())
+  questId    String
+  title      String
+  /// 担当メンバー（GroupMember.id）任意
+  assigneeId String?
+  status     QuestStatus @default(OPEN)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  quest      Quest       @relation(fields: [questId], references: [id], onDelete: Cascade)
+  assignee   GroupMember? @relation(fields: [assigneeId], references: [id])
 }
 
 enum QuestType {
