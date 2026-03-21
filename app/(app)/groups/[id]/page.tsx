@@ -21,6 +21,30 @@ type Group = {
   members: Member[];
 };
 
+type Quest = {
+  id: string;
+  title: string;
+  status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  questType: "GOVERNMENT" | "MEMBER";
+  pointReward: number;
+  creator: { id: string };
+  completer: { id: string } | null;
+};
+
+const QUEST_STATUS_LABEL: Record<Quest["status"], string> = {
+  OPEN: "受付中",
+  IN_PROGRESS: "進行中",
+  COMPLETED: "完了",
+  CANCELLED: "キャンセル",
+};
+
+const QUEST_STATUS_COLOR: Record<Quest["status"], string> = {
+  OPEN: "bg-green-100 text-green-700",
+  IN_PROGRESS: "bg-yellow-100 text-yellow-700",
+  COMPLETED: "bg-gray-100 text-gray-500",
+  CANCELLED: "bg-red-100 text-red-500",
+};
+
 const ROLE_LABEL: Record<Role, string> = {
   ADMIN: "管理人",
   LEADER: "政府関係者",
@@ -37,27 +61,31 @@ export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [group, setGroup] = useState<Group | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [quests, setQuests] = useState<Quest[]>([]);
 
   useEffect(() => {
-    fetch("/api/me")
-      .then((r) => r.ok ? r.json() : Promise.reject(r.status))
-      .then((d) => { if (d.id) setMyUserId(d.id); })
-      .catch((e) => console.error("ユーザー情報の取得に失敗しました", e));
-    fetch("/api/groups")
-      .then((r) => r.ok ? r.json() : Promise.reject(r.status))
-      .then((data: unknown) => {
-        if (Array.isArray(data)) {
-          const found = data.find((g: Group) => g.id === id);
-          setGroup(found ?? null);
-        }
-      })
-      .catch((e) => console.error("グループ情報の取得に失敗しました", e));
+    Promise.all([
+      fetch("/api/me").then((r) => r.ok ? r.json() : null),
+      fetch("/api/groups").then((r) => r.ok ? r.json() : []),
+      fetch(`/api/groups/${id}/quests`).then((r) => r.ok ? r.json() : []),
+    ]).then(([me, groups, questsData]) => {
+      if (me?.id) setMyUserId(me.id);
+      if (Array.isArray(groups)) {
+        const found = groups.find((g: Group) => g.id === id);
+        setGroup(found ?? null);
+      }
+      if (Array.isArray(questsData)) setQuests(questsData);
+    }).catch((e) => console.error("データの取得に失敗しました", e));
   }, [id]);
 
   if (!group) return <div className="p-10 text-gray-500">読み込み中...</div>;
 
   const myMember = group.members.find((m) => m.user.id === myUserId);
   const myRole = myMember?.role ?? "MEMBER";
+
+  const myQuests = quests
+    .filter((q) => myMember && (q.creator.id === myMember.id || q.completer?.id === myMember.id))
+    .slice(0, 5);
 
   const totalCirculating = group.members.reduce((sum, m) => sum + m.memberPoints, 0);
 
@@ -89,6 +117,58 @@ export default function GroupDetailPage() {
             )}
           </div>
         </section>
+
+        {/* 自分の情報 */}
+        {myMember && (
+          <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
+            <h3 className="font-semibold text-gray-800">自分の情報</h3>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-500">保有ポイント</span>
+              <span className="text-3xl font-bold text-blue-600">{myMember.memberPoints} pt</span>
+            </div>
+
+            {myQuests.length > 0 && (
+              <div className="border-t border-gray-100 pt-4 space-y-2">
+                <p className="text-sm text-gray-500">関連クエスト</p>
+                <ul className="space-y-2">
+                  {myQuests.map((q) => (
+                    <li key={q.id}>
+                      <Link
+                        href={`/groups/${id}/quests/${q.id}`}
+                        className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${QUEST_STATUS_COLOR[q.status]}`}>
+                            {QUEST_STATUS_LABEL[q.status]}
+                          </span>
+                          <span className="text-sm text-gray-800 truncate">{q.title}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-gray-400">
+                            {q.creator.id === myMember.id ? "発行" : "受注"}
+                          </span>
+                          <span className="text-sm font-bold text-blue-600">{q.pointReward} pt</span>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                {quests.filter((q) => q.creator.id === myMember.id || q.completer?.id === myMember.id).length > 5 && (
+                  <Link
+                    href={`/groups/${id}/quests`}
+                    className="block text-xs text-blue-500 hover:text-blue-700 text-right pt-1"
+                  >
+                    すべて見る →
+                  </Link>
+                )}
+              </div>
+            )}
+
+            {myQuests.length === 0 && (
+              <p className="text-sm text-gray-400 border-t border-gray-100 pt-4">関連クエストはありません</p>
+            )}
+          </section>
+        )}
 
         {/* クエストへのリンク */}
         <Link
