@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Group Point
 
-## Getting Started
+グループ内でポイントを発行・管理できるWebアプリケーションです。
 
-First, run the development server:
+## 技術スタック
+
+- **Next.js** (App Router)
+- **TypeScript**
+- **Tailwind CSS**
+- **Prisma** + **PostgreSQL**
+- **NextAuth.js** (認証)
+- **nodemailer** (メール送信)
+
+## ローカル開発のセットアップ
+
+### 1. 依存パッケージのインストール
+
+```bash
+nvm use 20.19.5
+npm install
+```
+
+### 2. 環境変数の設定
+
+```bash
+cp .env.example .env
+```
+
+`.env` の `AUTH_SECRET` を生成して設定してください：
+
+```bash
+openssl rand -base64 32
+```
+
+### 3. DBとMailpitを起動
+
+```bash
+docker compose up -d
+```
+
+| サービス | URL |
+|---|---|
+| PostgreSQL | `localhost:5433` |
+| Mailpit（メール確認UI） | http://localhost:8025 |
+
+### 4. マイグレーション実行
+
+```bash
+npm run db:migrate
+```
+
+### 5. 開発サーバー起動
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 でアクセスできます。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## メール送信の動作確認
 
-## Learn More
+ローカル環境では **Mailpit** を使ってメール送信をキャプチャして確認します。実際のメールは送信されません。
 
-To learn more about Next.js, take a look at the following resources:
+### 確認手順
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. `docker compose up -d` でMailpitを起動
+2. アプリでグループを作成し、別ユーザーへの招待を送る
+3. **http://localhost:8025** をブラウザで開く
+4. 受信した招待メールが確認できます
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 本番環境（SendGrid）への切り替え
 
-## Deploy on Vercel
+`.env` の以下の項目を変更するだけで切り替えられます：
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+# ローカル（Mailpit）
+SMTP_HOST="localhost"
+SMTP_PORT="1025"
+SMTP_USER=""
+SMTP_PASS=""
+MAIL_FROM="noreply@group-point.local"
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# 本番（SendGrid）
+SMTP_HOST="smtp.sendgrid.net"
+SMTP_PORT="587"
+SMTP_USER="apikey"
+SMTP_PASS="<SendGrid APIキー>"
+MAIL_FROM="noreply@yourdomain.com"
+```
+
+---
+
+## よく使うコマンド
+
+```bash
+npm run dev          # 開発サーバー起動
+npm run build        # プロダクションビルド
+npm run lint         # ESLint 実行
+npm run db:migrate   # マイグレーション実行
+npm run db:generate  # Prismaクライアント再生成
+npm run db:studio    # Prisma Studio（GUI）起動
+```
