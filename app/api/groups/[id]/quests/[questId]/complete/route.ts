@@ -59,6 +59,24 @@ export async function POST(_req: Request, { params }: Params) {
     );
   }
 
+  // 報酬が設定されていないサブクエストがある場合は完了不可
+  const noRewardSubQuests = quest.subQuests.filter((sq) => sq.pointReward === 0);
+  if (noRewardSubQuests.length > 0) {
+    return NextResponse.json(
+      { error: `報酬が設定されていないサブクエストが ${noRewardSubQuests.length} 件あります。` },
+      { status: 400 }
+    );
+  }
+
+  // サブクエストの合計報酬がクエスト報酬と一致しない場合は完了不可
+  const totalSubReward = quest.subQuests.reduce((sum, sq) => sum + sq.pointReward, 0);
+  if (totalSubReward !== quest.pointReward) {
+    return NextResponse.json(
+      { error: `サブクエストの報酬合計（${totalSubReward} pt）がクエスト報酬（${quest.pointReward} pt）と一致しません。` },
+      { status: 400 }
+    );
+  }
+
   const assignedSubQuests = quest.subQuests.filter((sq) => sq.status === "ASSIGNED");
 
   // トランザクションで一括処理
