@@ -446,9 +446,12 @@ function IssuedPointsEditor({
         {isAdmin && (
           <button
             onClick={() => setSettingsOpen((v) => !v)}
-            className="text-sm px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 transition"
           >
             表示設定
+            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${settingsOpen ? "bg-blue-600" : "bg-gray-300"}`}>
+              <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${settingsOpen ? "translate-x-4" : "translate-x-0.5"}`} />
+            </span>
           </button>
         )}
       </div>
