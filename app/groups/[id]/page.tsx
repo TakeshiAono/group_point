@@ -21,11 +21,6 @@ type Group = {
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [group, setGroup] = useState<Group | null>(null);
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"LEADER" | "MEMBER">("MEMBER");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     fetch(`/api/groups`)
@@ -37,29 +32,6 @@ export default function GroupDetailPage() {
         }
       });
   }, [id]);
-
-  async function handleInvite(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/groups/${id}/invitations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, role }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "エラーが発生しました");
-        return;
-      }
-      setSuccess(`${data.invitee.name ?? data.invitee.email} に招待を送りました`);
-      setEmail("");
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   if (!group) {
     return <div className="p-10 text-gray-500">読み込み中...</div>;
@@ -89,71 +61,91 @@ export default function GroupDetailPage() {
           </div>
         </section>
 
-        {/* 招待フォーム */}
-        <section className="bg-white border border-gray-200 rounded-xl p-6">
-          <h3 className="font-semibold text-gray-800 mb-1">メンバーを招待</h3>
-          <p className="text-xs text-gray-400 mb-4">招待されたユーザーがトップページで承認するとメンバーになります</p>
-          <form onSubmit={handleInvite} className="space-y-3">
-            <div className="flex gap-3">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="メールアドレス"
-                className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                required
-              />
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as "LEADER" | "MEMBER")}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                <option value="MEMBER">一般メンバー</option>
-                <option value="LEADER">政府関係者（LEADER）</option>
-              </select>
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-5 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
-            >
-              {submitting ? "送信中..." : "招待を送る"}
-            </button>
-          </form>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-          {success && <p className="mt-2 text-sm text-green-600">{success}</p>}
-        </section>
-
-        {/* 政府関係者一覧 */}
-        <section>
-          <h3 className="font-semibold text-gray-700 mb-3">
-            政府関係者（LEADER）
-            {leaders.length > 0 && <span className="ml-2 text-gray-400 font-normal text-sm">{leaders.length}人</span>}
-          </h3>
-          {leaders.length === 0 ? (
-            <p className="text-gray-400 text-sm">政府関係者がいません。</p>
-          ) : (
+        {/* 政府関係者 */}
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-gray-700">政府関係者（LEADER）</h3>
+            {leaders.length > 0 && <span className="text-gray-400 text-sm">{leaders.length}人</span>}
+          </div>
+          {leaders.length > 0 && (
             <ul className="space-y-2">
               {leaders.map((m) => <MemberRow key={m.id} member={m} />)}
             </ul>
           )}
+          <InviteForm groupId={id} role="LEADER" />
         </section>
 
-        {/* 一般メンバー一覧 */}
-        <section>
-          <h3 className="font-semibold text-gray-700 mb-3">
-            一般メンバー
-            {regularMembers.length > 0 && <span className="ml-2 text-gray-400 font-normal text-sm">{regularMembers.length}人</span>}
-          </h3>
-          {regularMembers.length === 0 ? (
-            <p className="text-gray-400 text-sm">一般メンバーがいません。</p>
-          ) : (
+        {/* 一般メンバー */}
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-gray-700">一般メンバー</h3>
+            {regularMembers.length > 0 && <span className="text-gray-400 text-sm">{regularMembers.length}人</span>}
+          </div>
+          {regularMembers.length > 0 && (
             <ul className="space-y-2">
               {regularMembers.map((m) => <MemberRow key={m.id} member={m} />)}
             </ul>
           )}
+          <InviteForm groupId={id} role="MEMBER" />
         </section>
       </main>
+    </div>
+  );
+}
+
+function InviteForm({ groupId, role }: { groupId: string; role: "LEADER" | "MEMBER" }) {
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const label = role === "LEADER" ? "政府関係者を招待" : "一般メンバーを招待";
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/groups/${groupId}/invitations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "エラーが発生しました");
+        return;
+      }
+      setSuccess(`${data.invitee.name ?? data.invitee.email} に招待を送りました`);
+      setEmail("");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-5">
+      <p className="text-sm font-medium text-gray-700 mb-3">{label}</p>
+      <form onSubmit={handleSubmit} className="flex gap-3">
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="メールアドレス"
+          className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          required
+        />
+        <button
+          type="submit"
+          disabled={submitting}
+          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+        >
+          {submitting ? "送信中..." : "招待を送る"}
+        </button>
+      </form>
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {success && <p className="mt-2 text-sm text-green-600">{success}</p>}
     </div>
   );
 }
