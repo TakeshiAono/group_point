@@ -66,6 +66,14 @@ const SUB_STATUS_COLOR: Record<SubQuest["status"], string> = {
   CANCELLED: "bg-red-100 text-red-500",
 };
 
+function calcThresholdDate(createdAt: string, deadline: string, thresholdPercent: number): Date {
+  const start = new Date(createdAt).getTime();
+  const end = new Date(deadline).getTime();
+  const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+  const days = Math.ceil(totalDays * thresholdPercent / 100);
+  return new Date(start + days * 24 * 60 * 60 * 1000);
+}
+
 export default function QuestDetailPage() {
   const { id: groupId, questId } = useParams<{ id: string; questId: string }>();
   const [quest, setQuest] = useState<Quest | null>(null);
@@ -79,6 +87,13 @@ export default function QuestDetailPage() {
   const [accepting, setAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState("");
   const [editing, setEditing] = useState(false);
+  const [bonusRules, setBonusRules] = useState<{ thresholdPercent: number; bonusRate: number }[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/groups/${groupId}/quests/${questId}/bonus-rules`)
+      .then((r) => r.ok ? r.json() : [])
+      .then(setBonusRules);
+  }, [groupId, questId]);
 
   useEffect(() => {
     Promise.all([
@@ -117,6 +132,22 @@ export default function QuestDetailPage() {
 
   const isOverdue = quest.deadline && quest.status !== "COMPLETED" && quest.status !== "CANCELLED"
     && new Date(quest.deadline) < new Date();
+
+  // 最も近いボーナス期限までの残り日数
+  const nextBonusDaysLeft = (() => {
+    if (!quest.deadline || quest.status === "COMPLETED" || quest.status === "CANCELLED") return null;
+    const now = new Date();
+    const upcoming = bonusRules
+      .filter((r) => r.bonusRate > 0)
+      .map((r) => {
+        const date = calcThresholdDate(quest.createdAt, quest.deadline!, r.thresholdPercent);
+        const days = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return { days, date };
+      })
+      .filter(({ days }) => days >= 0)
+      .sort((a, b) => a.days - b.days);
+    return upcoming[0] ?? null;
+  })();
 
   async function handleAccept() {
     setAccepting(true);
@@ -175,7 +206,14 @@ export default function QuestDetailPage() {
 
         <div>
           <div className="flex items-start justify-between gap-2">
-            <h2 className="text-xl font-bold text-gray-800">{quest.title}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-bold text-gray-800">{quest.title}</h2>
+              {nextBonusDaysLeft !== null && (
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${nextBonusDaysLeft.days === 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-700"}`}>
+                  {nextBonusDaysLeft.days === 0 ? "ボーナス期限 本日" : `ボーナスまであと ${nextBonusDaysLeft.days} 日`}
+                </span>
+              )}
+            </div>
             {canEdit && (
               <button
                 onClick={() => setEditing((v) => !v)}
@@ -369,14 +407,6 @@ export default function QuestDetailPage() {
 }
 
 type BonusRule = { id: string; thresholdPercent: number; bonusRate: number };
-
-function calcThresholdDate(createdAt: string, deadline: string, thresholdPercent: number): Date {
-  const start = new Date(createdAt).getTime();
-  const end = new Date(deadline).getTime();
-  const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-  const days = Math.ceil(totalDays * thresholdPercent / 100);
-  return new Date(start + days * 24 * 60 * 60 * 1000);
-}
 
 function BonusRulesSection({
   groupId, questId, canEdit, questCreatedAt, questDeadline,
