@@ -100,10 +100,18 @@ export default function GroupDetailPage() {
             )}
           </div>
           <div className="mt-2 flex gap-6 text-sm text-gray-500">
-            <span>政府発行済みポイント: <strong className="text-gray-700">{group.totalIssuedPoints} pt</strong></span>
             <span>流通ポイント合計: <strong className="text-gray-700">{totalCirculating} pt</strong></span>
           </div>
         </section>
+
+        {/* 政府発行済みポイント管理 */}
+        <IssuedPointsEditor
+          groupId={id}
+          totalIssuedPoints={group.totalIssuedPoints}
+          totalCirculating={totalCirculating}
+          isAdmin={myRole === "ADMIN"}
+          onUpdated={(v) => setGroup((prev) => prev ? { ...prev, totalIssuedPoints: v } : prev)}
+        />
 
         {/* 管理人 */}
         <MemberSection
@@ -281,5 +289,96 @@ function InviteForm({ groupId, role }: { groupId: string; role: "LEADER" | "MEMB
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       {success && <p className="mt-2 text-sm text-green-600">{success}</p>}
     </div>
+  );
+}
+
+function IssuedPointsEditor({
+  groupId,
+  totalIssuedPoints,
+  totalCirculating,
+  isAdmin,
+  onUpdated,
+}: {
+  groupId: string;
+  totalIssuedPoints: number;
+  totalCirculating: number;
+  isAdmin: boolean;
+  onUpdated: (v: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(totalIssuedPoints);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave() {
+    setError("");
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/groups/${groupId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ totalIssuedPoints: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "エラーが発生しました");
+        return;
+      }
+      onUpdated(data.totalIssuedPoints);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="bg-white border border-gray-200 rounded-xl p-6">
+      <h3 className="font-semibold text-gray-800 mb-4">政府発行済みポイント</h3>
+      <div className="flex items-center gap-4">
+        {editing ? (
+          <>
+            <input
+              type="number"
+              min={totalCirculating}
+              value={value}
+              onChange={(e) => setValue(Number(e.target.value))}
+              className="w-40 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <span className="text-sm text-gray-500">pt</span>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+            >
+              {saving ? "保存中..." : "保存"}
+            </button>
+            <button
+              onClick={() => { setEditing(false); setValue(totalIssuedPoints); setError(""); }}
+              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition"
+            >
+              キャンセル
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="text-2xl font-bold text-gray-800">{totalIssuedPoints} pt</span>
+            {isAdmin && (
+              <button
+                onClick={() => { setValue(totalIssuedPoints); setEditing(true); }}
+                className="text-sm text-blue-600 hover:text-blue-800 transition"
+              >
+                編集
+              </button>
+            )}
+          </>
+        )}
+      </div>
+      {editing && (
+        <p className="mt-2 text-xs text-gray-400">
+          ※ 流通ポイント（{totalCirculating} pt）より少なくすることはできません
+        </p>
+      )}
+      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+    </section>
   );
 }

@@ -64,7 +64,7 @@ async function main() {
     create: {
       id: "seed-group-001",
       name: "テスト自治体",
-      totalIssuedPoints: 0,
+      totalIssuedPoints: 1000,  // ADMINが1000pt発行済み
     },
   });
 
