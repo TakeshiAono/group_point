@@ -60,7 +60,8 @@ model GroupMember {
 }
 
 enum GroupRole {
-  LEADER  // 政府（グループ長）
+  ADMIN   // 管理人（グループ作成者）：LEADER・MEMBERの招待・削除が可能
+  LEADER  // 政府関係者：MEMBERの招待・削除のみ可能
   MEMBER  // 一般メンバー
 }
 

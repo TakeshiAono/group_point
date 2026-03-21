@@ -49,6 +49,22 @@ docker compose up -d
 npm run db:migrate
 ```
 
+### 5. シードデータ投入
+
+```bash
+npm run db:seed
+```
+
+以下のテストアカウントが作成されます（パスワードはすべて `password123`）：
+
+| メールアドレス | ロール |
+|---|---|
+| admin@example.com | ADMIN（管理人） |
+| leader1〜3@example.com | LEADER（政府関係者） |
+| member1〜3@example.com | MEMBER（一般メンバー） |
+
+グループ「テスト自治体」に全員が所属した状態で作成されます。
+
 ### 5. 開発サーバー起動
 
 ```bash
