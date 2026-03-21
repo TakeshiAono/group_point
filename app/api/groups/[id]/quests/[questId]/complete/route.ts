@@ -148,21 +148,11 @@ export async function POST(_req: Request, { params }: Params) {
 
     // 支払者のポイントを調整
     if (quest.questType === "MEMBER") {
-      // 作成時にエスクロー済みの額（quest.pointReward）との差分を調整
-      const diff = totalPayout - quest.pointReward;
-      if (diff > 0) {
-        // ボーナス分を発行者から追加徴収
-        await tx.groupMember.update({
-          where: { id: quest.creatorId },
-          data: { memberPoints: { decrement: diff } },
-        });
-      } else if (diff < 0) {
-        // ペナルティ分を発行者に返還
-        await tx.groupMember.update({
-          where: { id: quest.creatorId },
-          data: { memberPoints: { increment: -diff } },
-        });
-      }
+      // 完了時に全額（ベース＋ボーナス）を発行者から引く
+      await tx.groupMember.update({
+        where: { id: quest.creatorId },
+        data: { memberPoints: { decrement: totalPayout } },
+      });
     } else if (quest.questType === "GOVERNMENT") {
       // 政府案件: 実際の支払額をグループの発行済みポイントから差し引く
       await tx.group.update({

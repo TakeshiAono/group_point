@@ -97,7 +97,7 @@ export async function POST(
     return NextResponse.json(quest, { status: 201 });
   }
 
-  // メンバー案件：作成者の保有ポイントからエスクロー
+  // メンバー案件：残高チェックのみ（支払いは完了時）
   if (creatorMember.memberPoints < pointReward) {
     return NextResponse.json(
       { error: `保有ポイントが不足しています（残り ${creatorMember.memberPoints} pt）` },
@@ -105,19 +105,13 @@ export async function POST(
     );
   }
 
-  const [quest] = await prisma.$transaction([
-    prisma.quest.create({
-      data: { groupId, creatorId: creatorMember.id, title: title.trim(), description: description?.trim() ?? null, pointReward, questType: "MEMBER", deadline: deadline ? new Date(deadline) : null },
-      include: {
-        creator: { include: { user: { select: { id: true, name: true, email: true } } } },
-        completer: { include: { user: { select: { id: true, name: true, email: true } } } },
-      },
-    }),
-    prisma.groupMember.update({
-      where: { id: creatorMember.id },
-      data: { memberPoints: { decrement: pointReward } },
-    }),
-  ]);
+  const quest = await prisma.quest.create({
+    data: { groupId, creatorId: creatorMember.id, title: title.trim(), description: description?.trim() ?? null, pointReward, questType: "MEMBER", deadline: deadline ? new Date(deadline) : null },
+    include: {
+      creator: { include: { user: { select: { id: true, name: true, email: true } } } },
+      completer: { include: { user: { select: { id: true, name: true, email: true } } } },
+    },
+  });
 
   await addQuestLog({ questId: quest.id, memberId: creatorMember.id, action: "CREATED", detail: `クエスト「${quest.title}」が作成されました（${quest.pointReward} pt）` });
 
