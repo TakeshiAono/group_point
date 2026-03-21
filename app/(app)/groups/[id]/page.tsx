@@ -319,12 +319,13 @@ export default function GroupDetailPage() {
           </div>
         </Link>
 
-        {/* 提案報酬設定（ADMIN/LEADERのみ） */}
-        {(myRole === "ADMIN" || myRole === "LEADER") && (
-          <ProposalRewardEditor
+        {/* グループ設定（全員閲覧可・ADMIN/LEADERは編集可） */}
+        {myMember && (
+          <GroupSettingsSection
             groupId={id}
+            canEdit={myRole === "ADMIN" || myRole === "LEADER"}
             proposalReward={group.proposalReward}
-            onUpdated={(v) => setGroup((prev) => prev ? { ...prev, proposalReward: v } : prev)}
+            onProposalRewardUpdated={(v) => setGroup((prev) => prev ? { ...prev, proposalReward: v } : prev)}
           />
         )}
 
@@ -964,17 +965,97 @@ function DeltaForm({
   );
 }
 
-function ProposalRewardEditor({
+// ─── グループ設定セクション ───────────────────────────────────────────
+// 全メンバーが閲覧可能。canEdit=true のとき（ADMIN/LEADER）は編集も可能。
+// 今後グループ単位の設定が増えた場合はこのセクション内に追加する。
+
+function GroupSettingsSection({
   groupId,
+  canEdit,
   proposalReward,
-  onUpdated,
+  onProposalRewardUpdated,
 }: {
   groupId: string;
+  canEdit: boolean;
   proposalReward: number;
-  onUpdated: (v: number) => void;
+  onProposalRewardUpdated: (v: number) => void;
+}) {
+  return (
+    <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
+      <h3 className="font-semibold text-gray-800">グループ設定</h3>
+
+      {/* 提案報酬 */}
+      <SettingRow
+        label="クエスト提案報酬"
+        description="提案が承認されたときに提案者へ付与する一律ポイント"
+        canEdit={canEdit}
+        displayValue={`${proposalReward} pt`}
+        editForm={(onClose) => (
+          <ProposalRewardForm
+            groupId={groupId}
+            current={proposalReward}
+            onSaved={(v) => { onProposalRewardUpdated(v); onClose(); }}
+            onCancel={onClose}
+          />
+        )}
+      />
+
+      {/* 今後の設定はここに <SettingRow ... /> を追加する */}
+    </section>
+  );
+}
+
+function SettingRow({
+  label,
+  description,
+  canEdit,
+  displayValue,
+  editForm,
+}: {
+  label: string;
+  description: string;
+  canEdit: boolean;
+  displayValue: string;
+  editForm: (onClose: () => void) => React.ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(proposalReward);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-700">{label}</p>
+          <p className="text-xs text-gray-400">{description}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-bold text-blue-600">{displayValue}</span>
+          {canEdit && !editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="text-xs text-gray-400 hover:text-gray-600 transition border border-gray-200 rounded px-2 py-0.5"
+            >
+              変更
+            </button>
+          )}
+        </div>
+      </div>
+      {editing && editForm(() => setEditing(false))}
+    </div>
+  );
+}
+
+function ProposalRewardForm({
+  groupId,
+  current,
+  onSaved,
+  onCancel,
+}: {
+  groupId: string;
+  current: number;
+  onSaved: (v: number) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(current);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -990,53 +1071,34 @@ function ProposalRewardEditor({
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "エラーが発生しました"); return; }
-      onUpdated(data.proposalReward);
-      setEditing(false);
+      onSaved(data.proposalReward);
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-gray-800">クエスト提案報酬</h3>
-          <p className="text-xs text-gray-400 mt-0.5">提案が承認されたときに提案者へ付与する一律ポイント</p>
-        </div>
-        <button
-          onClick={() => { setEditing((v) => !v); setValue(proposalReward); setError(""); }}
-          className="text-xs text-gray-400 hover:text-gray-600 transition"
-        >
-          {editing ? "キャンセル" : "変更"}
-        </button>
-      </div>
-
-      {!editing ? (
-        <p className="text-2xl font-bold text-blue-600">
-          {proposalReward} <span className="text-sm font-normal text-gray-500">pt</span>
-        </p>
-      ) : (
-        <form onSubmit={handleSave} className="flex items-center gap-3">
-          <input
-            type="number"
-            min={0}
-            value={value}
-            onChange={(e) => setValue(Number(e.target.value))}
-            className="w-28 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            required
-          />
-          <span className="text-sm text-gray-500">pt</span>
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
-          >
-            {saving ? "保存中..." : "保存"}
-          </button>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-        </form>
-      )}
-    </section>
+    <form onSubmit={handleSave} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+      <input
+        type="number"
+        min={0}
+        value={value}
+        onChange={(e) => setValue(Number(e.target.value))}
+        className="w-24 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        required
+      />
+      <span className="text-sm text-gray-500">pt</span>
+      <button
+        type="submit"
+        disabled={saving}
+        className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+      >
+        {saving ? "保存中..." : "保存"}
+      </button>
+      <button type="button" onClick={onCancel} className="text-xs text-gray-400 hover:text-gray-600 transition">
+        キャンセル
+      </button>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+    </form>
   );
 }
