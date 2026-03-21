@@ -10,7 +10,7 @@ type QuestMember = { id: string; user: QuestUser };
 type SubQuest = {
   id: string;
   title: string;
-  status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  status: "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   deadline: string | null;
   assignee: QuestMember | null;
 };
@@ -40,6 +40,22 @@ const STATUS_LABEL: Record<Quest["status"], string> = {
 
 const STATUS_COLOR: Record<Quest["status"], string> = {
   OPEN: "bg-green-100 text-green-700",
+  IN_PROGRESS: "bg-yellow-100 text-yellow-700",
+  COMPLETED: "bg-gray-100 text-gray-500",
+  CANCELLED: "bg-red-100 text-red-500",
+};
+
+const SUB_STATUS_LABEL: Record<SubQuest["status"], string> = {
+  REQUESTED: "依頼中",
+  ASSIGNED: "アサイン済み",
+  IN_PROGRESS: "進行中",
+  COMPLETED: "完了",
+  CANCELLED: "キャンセル",
+};
+
+const SUB_STATUS_COLOR: Record<SubQuest["status"], string> = {
+  REQUESTED: "bg-blue-100 text-blue-700",
+  ASSIGNED: "bg-purple-100 text-purple-700",
   IN_PROGRESS: "bg-yellow-100 text-yellow-700",
   COMPLETED: "bg-gray-100 text-gray-500",
   CANCELLED: "bg-red-100 text-red-500",
@@ -170,8 +186,8 @@ export default function QuestDetailPage() {
                         )}
                       </p>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[sq.status]}`}>
-                      {STATUS_LABEL[sq.status]}
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${SUB_STATUS_COLOR[sq.status]}`}>
+                      {SUB_STATUS_LABEL[sq.status]}
                     </span>
                   </Link>
                 </li>

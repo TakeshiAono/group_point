@@ -9,7 +9,7 @@ type QuestMember = { id: string; user: QuestUser };
 type SubQuest = {
   id: string;
   title: string;
-  status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  status: "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   deadline: string | null;
   createdAt: string;
   assignee: QuestMember | null;
@@ -22,14 +22,16 @@ type SubQuest = {
 };
 
 const STATUS_LABEL: Record<SubQuest["status"], string> = {
-  OPEN: "受付中",
+  REQUESTED: "依頼中",
+  ASSIGNED: "アサイン済み",
   IN_PROGRESS: "進行中",
   COMPLETED: "完了",
   CANCELLED: "キャンセル",
 };
 
 const STATUS_COLOR: Record<SubQuest["status"], string> = {
-  OPEN: "bg-green-100 text-green-700",
+  REQUESTED: "bg-blue-100 text-blue-700",
+  ASSIGNED: "bg-purple-100 text-purple-700",
   IN_PROGRESS: "bg-yellow-100 text-yellow-700",
   COMPLETED: "bg-gray-100 text-gray-500",
   CANCELLED: "bg-red-100 text-red-500",
@@ -39,6 +41,7 @@ export default function SubQuestsPage() {
   const [subQuests, setSubQuests] = useState<SubQuest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<SubQuest["status"] | "ALL">("ALL");
+
 
   useEffect(() => {
     fetch("/api/subquests")
@@ -68,7 +71,7 @@ export default function SubQuestsPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-800">サブクエスト一覧</h2>
         <div className="flex gap-2 flex-wrap">
-          {(["ALL", "OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const).map((f) => (
+          {(["ALL", "REQUESTED", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -78,7 +81,7 @@ export default function SubQuestsPage() {
                   : "text-gray-600 border-gray-300 hover:border-blue-400"
               }`}
             >
-              {f === "ALL" ? "すべて" : STATUS_LABEL[f]}
+              {f === "ALL" ? "すべて" : STATUS_LABEL[f as SubQuest["status"]]}
             </button>
           ))}
         </div>

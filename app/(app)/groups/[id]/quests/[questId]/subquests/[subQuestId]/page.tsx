@@ -10,7 +10,7 @@ type QuestMember = { id: string; user: QuestUser };
 type SubQuest = {
   id: string;
   title: string;
-  status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  status: "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   deadline: string | null;
   assignee: QuestMember | null;
   createdAt: string;
@@ -25,14 +25,16 @@ type SubQuest = {
 };
 
 const STATUS_LABEL: Record<SubQuest["status"], string> = {
-  OPEN: "受付中",
+  REQUESTED: "依頼中",
+  ASSIGNED: "アサイン済み",
   IN_PROGRESS: "進行中",
   COMPLETED: "完了",
   CANCELLED: "キャンセル",
 };
 
 const STATUS_COLOR: Record<SubQuest["status"], string> = {
-  OPEN: "bg-green-100 text-green-700",
+  REQUESTED: "bg-blue-100 text-blue-700",
+  ASSIGNED: "bg-purple-100 text-purple-700",
   IN_PROGRESS: "bg-yellow-100 text-yellow-700",
   COMPLETED: "bg-gray-100 text-gray-500",
   CANCELLED: "bg-red-100 text-red-500",
@@ -47,6 +49,7 @@ export default function SubQuestDetailPage() {
   const [myMemberId, setMyMemberId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -67,6 +70,25 @@ export default function SubQuestDetailPage() {
       .catch(() => setError("サブクエストの取得に失敗しました"))
       .finally(() => setLoading(false));
   }, [groupId, questId, subQuestId]);
+
+  async function handleAccept() {
+    setAccepting(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/groups/${groupId}/quests/${questId}/subquests/${subQuestId}/accept`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "受諾に失敗しました");
+        return;
+      }
+      setSubQuest(data);
+    } finally {
+      setAccepting(false);
+    }
+  }
 
   async function handleDelete() {
     if (!confirm("このサブクエストを削除しますか？")) return;
@@ -93,6 +115,11 @@ export default function SubQuestDetailPage() {
   const canDelete =
     myMemberId &&
     (subQuest.quest.creatorId === myMemberId || subQuest.quest.completerId === myMemberId);
+
+  const canAccept =
+    myMemberId &&
+    subQuest.assignee?.id === myMemberId &&
+    subQuest.status === "REQUESTED";
 
   const isOverdue = subQuest.deadline &&
     subQuest.status !== "COMPLETED" && subQuest.status !== "CANCELLED" &&
@@ -163,6 +190,20 @@ export default function SubQuestDetailPage() {
             {subQuest.quest.title}
           </Link>
         </div>
+
+        {/* 受諾ボタン（担当者のみ・依頼中のみ表示） */}
+        {canAccept && (
+          <div className="border-t border-gray-100 pt-4">
+            {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
+            <button
+              onClick={handleAccept}
+              disabled={accepting}
+              className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+            >
+              {accepting ? "受諾中..." : "このサブクエストを受諾する"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
