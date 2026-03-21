@@ -4,16 +4,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type Group = { id: string; name: string };
+type Member = { id: string; memberPoints: number; user: { id: string } };
+type Group = { id: string; name: string; members: Member[] };
 
 export default function Sidebar() {
   const [groups, setGroups] = useState<Group[]>([]);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
-    fetch("/api/groups")
-      .then((r) => r.ok ? r.json() : [])
-      .then((data) => { if (Array.isArray(data)) setGroups(data); });
+    Promise.all([
+      fetch("/api/groups").then((r) => r.ok ? r.json() : []),
+      fetch("/api/me").then((r) => r.ok ? r.json() : null),
+    ]).then(([groupsData, me]) => {
+      if (Array.isArray(groupsData)) setGroups(groupsData);
+      if (me?.id) setMyUserId(me.id);
+    });
   }, []);
 
   return (
@@ -33,17 +39,25 @@ export default function Sidebar() {
           <ul>
             {groups.map((g) => {
               const active = pathname.startsWith(`/groups/${g.id}`);
+              const myMember = myUserId
+                ? g.members.find((m) => m.user.id === myUserId)
+                : null;
               return (
                 <li key={g.id}>
                   <Link
                     href={`/groups/${g.id}`}
-                    className={`block px-4 py-2.5 text-sm truncate transition ${
+                    className={`flex items-center justify-between gap-2 px-4 py-2.5 transition ${
                       active
-                        ? "bg-blue-50 text-blue-700 font-medium"
+                        ? "bg-blue-50 text-blue-700"
                         : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
-                    {g.name}
+                    <span className={`text-sm truncate ${active ? "font-medium" : ""}`}>{g.name}</span>
+                    {myMember !== null && myMember !== undefined && (
+                      <span className={`text-xs font-bold shrink-0 ${active ? "text-blue-500" : "text-gray-400"}`}>
+                        {myMember.memberPoints} pt
+                      </span>
+                    )}
                   </Link>
                 </li>
               );

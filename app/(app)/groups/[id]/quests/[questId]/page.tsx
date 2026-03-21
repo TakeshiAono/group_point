@@ -10,7 +10,7 @@ type QuestMember = { id: string; user: QuestUser };
 type SubQuest = {
   id: string;
   title: string;
-  status: "REQUESTED" | "ASSIGNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  status: "REQUESTED" | "ASSIGNED" | "CHANGE_PENDING" | "CHANGE_DENIED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   deadline: string | null;
   pointReward: number;
   assignee: QuestMember | null;
@@ -49,6 +49,8 @@ const STATUS_COLOR: Record<Quest["status"], string> = {
 const SUB_STATUS_LABEL: Record<SubQuest["status"], string> = {
   REQUESTED: "依頼中",
   ASSIGNED: "アサイン済み",
+  CHANGE_PENDING: "変更承認待ち",
+  CHANGE_DENIED: "変更否認",
   IN_PROGRESS: "進行中",
   COMPLETED: "完了",
   CANCELLED: "キャンセル",
@@ -57,6 +59,8 @@ const SUB_STATUS_LABEL: Record<SubQuest["status"], string> = {
 const SUB_STATUS_COLOR: Record<SubQuest["status"], string> = {
   REQUESTED: "bg-blue-100 text-blue-700",
   ASSIGNED: "bg-purple-100 text-purple-700",
+  CHANGE_PENDING: "bg-orange-100 text-orange-700",
+  CHANGE_DENIED: "bg-red-100 text-red-600",
   IN_PROGRESS: "bg-yellow-100 text-yellow-700",
   COMPLETED: "bg-gray-100 text-gray-500",
   CANCELLED: "bg-red-100 text-red-500",
@@ -69,6 +73,10 @@ export default function QuestDetailPage() {
   const [myMember, setMyMember] = useState<GroupMember | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [completing, setCompleting] = useState(false);
+  const [completeError, setCompleteError] = useState("");
+  const [accepting, setAccepting] = useState(false);
+  const [acceptError, setAcceptError] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -95,8 +103,47 @@ export default function QuestDetailPage() {
   const canManageSubQuest =
     myMember && (quest.creator.id === myMember.id || quest.completer?.id === myMember.id);
 
+  const canAccept =
+    myMember && quest.status === "OPEN" && quest.creator.id !== myMember.id;
+
+  const canComplete =
+    myMember && quest.completer?.id === myMember.id && quest.status === "IN_PROGRESS";
+
   const isOverdue = quest.deadline && quest.status !== "COMPLETED" && quest.status !== "CANCELLED"
     && new Date(quest.deadline) < new Date();
+
+  async function handleAccept() {
+    setAccepting(true);
+    setAcceptError("");
+    try {
+      const res = await fetch(`/api/groups/${groupId}/quests/${questId}/accept`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setAcceptError(data.error ?? "受注に失敗しました");
+        return;
+      }
+      setQuest(data);
+    } finally {
+      setAccepting(false);
+    }
+  }
+
+  async function handleComplete() {
+    if (!confirm("このクエストを完了しますか？アサイン済みのサブクエスト担当者にポイントが支払われます。")) return;
+    setCompleting(true);
+    setCompleteError("");
+    try {
+      const res = await fetch(`/api/groups/${groupId}/quests/${questId}/complete`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setCompleteError(data.error ?? "完了処理に失敗しました");
+        return;
+      }
+      setQuest(data);
+    } finally {
+      setCompleting(false);
+    }
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10 space-y-6">
@@ -155,6 +202,37 @@ export default function QuestDetailPage() {
             </dd>
           </div>
         </dl>
+
+        {/* 受注ボタン */}
+        {canAccept && (
+          <div className="border-t border-gray-100 pt-4">
+            {acceptError && <p className="text-xs text-red-600 mb-2">{acceptError}</p>}
+            <button
+              onClick={handleAccept}
+              disabled={accepting}
+              className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+            >
+              {accepting ? "受注中..." : "このクエストを受注する"}
+            </button>
+          </div>
+        )}
+
+        {/* 完了ボタン */}
+        {canComplete && (
+          <div className="border-t border-gray-100 pt-4">
+            {completeError && <p className="text-xs text-red-600 mb-2">{completeError}</p>}
+            <button
+              onClick={handleComplete}
+              disabled={completing}
+              className="w-full py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
+            >
+              {completing ? "完了処理中..." : "クエストを完了する"}
+            </button>
+            <p className="text-xs text-gray-400 mt-1.5 text-center">
+              アサイン済みのサブクエスト担当者にポイントが支払われます
+            </p>
+          </div>
+        )}
       </div>
 
       {/* サブクエスト */}

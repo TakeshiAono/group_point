@@ -40,6 +40,106 @@ export async function GET(_req: Request, { params }: Params) {
   return NextResponse.json(subQuest);
 }
 
+// 報酬変更提案（クエストの発行者または受注者がASSIGNED/CHANGE_DENIEDのサブクエストに対して）
+export async function PATCH(req: Request, { params }: Params) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+  }
+
+  const { id: groupId, questId, subQuestId } = await params;
+  const body = await req.json();
+
+  const member = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: session.user.id, groupId } },
+  });
+  if (!member) {
+    return NextResponse.json({ error: "グループのメンバーではありません" }, { status: 403 });
+  }
+
+  const subQuest = await prisma.subQuest.findUnique({
+    where: { id: subQuestId },
+    include: {
+      quest: { include: { subQuests: { select: { id: true, pointReward: true } } } },
+    },
+  });
+
+  if (!subQuest || subQuest.questId !== questId) {
+    return NextResponse.json({ error: "サブクエストが見つかりません" }, { status: 404 });
+  }
+
+  if (subQuest.quest.creatorId !== member.id && subQuest.quest.completerId !== member.id) {
+    return NextResponse.json({ error: "クエストの発行者または受注者のみ変更できます" }, { status: 403 });
+  }
+
+  // 担当者変更
+  if ("assigneeId" in body) {
+    const newAssigneeId: string | null = body.assigneeId ?? null;
+
+    if (newAssigneeId) {
+      const assignee = await prisma.groupMember.findUnique({ where: { id: newAssigneeId } });
+      if (!assignee || assignee.groupId !== groupId) {
+        return NextResponse.json({ error: "担当者が見つかりません" }, { status: 404 });
+      }
+    }
+
+    const updated = await prisma.subQuest.update({
+      where: { id: subQuestId },
+      data: {
+        assigneeId: newAssigneeId,
+        status: newAssigneeId ? "REQUESTED" : "REQUESTED",
+        pendingPointReward: null,
+      },
+      include: {
+        assignee: { include: { user: { select: { id: true, name: true, email: true } } } },
+        quest: {
+          include: {
+            creator: { include: { user: { select: { id: true, name: true, email: true } } } },
+            completer: { include: { user: { select: { id: true, name: true, email: true } } } },
+          },
+        },
+      },
+    });
+    return NextResponse.json(updated);
+  }
+
+  // 報酬変更提案
+  const { pendingPointReward } = body;
+  if (typeof pendingPointReward !== "number" || pendingPointReward < 0 || !Number.isInteger(pendingPointReward)) {
+    return NextResponse.json({ error: "報酬は0以上の整数で入力してください" }, { status: 400 });
+  }
+
+  if (subQuest.status !== "ASSIGNED" && subQuest.status !== "CHANGE_DENIED") {
+    return NextResponse.json({ error: "アサイン済みまたは変更否認のサブクエストのみ変更できます" }, { status: 400 });
+  }
+
+  const otherTotal = subQuest.quest.subQuests
+    .filter((sq) => sq.id !== subQuestId)
+    .reduce((sum, sq) => sum + sq.pointReward, 0);
+  if (otherTotal + pendingPointReward > subQuest.quest.pointReward) {
+    return NextResponse.json(
+      { error: `報酬の合計がクエスト報酬（${subQuest.quest.pointReward} pt）を超えます。最大 ${subQuest.quest.pointReward - otherTotal} pt まで設定できます。` },
+      { status: 400 }
+    );
+  }
+
+  const updated = await prisma.subQuest.update({
+    where: { id: subQuestId },
+    data: { status: "CHANGE_PENDING", pendingPointReward },
+    include: {
+      assignee: { include: { user: { select: { id: true, name: true, email: true } } } },
+      quest: {
+        include: {
+          creator: { include: { user: { select: { id: true, name: true, email: true } } } },
+          completer: { include: { user: { select: { id: true, name: true, email: true } } } },
+        },
+      },
+    },
+  });
+
+  return NextResponse.json(updated);
+}
+
 // サブクエスト削除
 export async function DELETE(_req: Request, { params }: Params) {
   const session = await auth();
