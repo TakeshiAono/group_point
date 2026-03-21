@@ -304,15 +304,15 @@ export default function GroupDetailPage() {
           </div>
         </Link>
 
-        {/* 公共事業クエスト提案へのリンク */}
+        {/* 管理者へのクエスト提案へのリンク */}
         <Link
           href={`/groups/${id}/quest-proposals`}
           className="block bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-semibold text-gray-800">公共事業クエスト提案</p>
-              <p className="text-xs text-gray-400 mt-0.5">市民からの提案一覧・承認（政府関係者）</p>
+              <p className="font-semibold text-gray-800">管理者へのクエスト提案</p>
+              <p className="text-xs text-gray-400 mt-0.5">メンバーからの提案一覧・審査承認</p>
             </div>
             <span className="text-gray-400">→</span>
           </div>

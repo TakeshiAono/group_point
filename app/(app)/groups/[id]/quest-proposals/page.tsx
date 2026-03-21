@@ -91,9 +91,9 @@ export default function QuestProposalsPage() {
       <main className="max-w-4xl mx-auto px-6 py-10 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">公共事業クエスト提案</h2>
+            <h2 className="text-2xl font-bold text-gray-800">管理者へのクエスト提案</h2>
             <p className="text-sm text-gray-500 mt-1">
-              市民からの公共事業クエスト提案一覧です。政府関係者が審査・承認します。
+              メンバーからの提案一覧です。管理者が審査・承認します。
             </p>
           </div>
           {isMemberOnly && (
@@ -362,7 +362,7 @@ function CreateProposalForm({
       <div>
         <h3 className="font-semibold text-gray-800">公共事業クエストを提案</h3>
         <p className="text-xs text-gray-500 mt-1">
-          政府関係者が審査し、承認されると正式なクエストとして発行されます
+          管理者が審査し、承認されると正式なクエストとして発行されます
         </p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-3">
