@@ -49,6 +49,7 @@ const MEMBER_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#
 export default function GroupAnalyticsPage() {
   const { id: groupId } = useParams<{ id: string }>();
   const [group, setGroup] = useState<Group | null>(null);
+  const [myMemberId, setMyMemberId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const STORAGE_KEY = `analytics-filter-${groupId}`;
@@ -98,12 +99,21 @@ export default function GroupAnalyticsPage() {
     });
   }
 
-  // グループ情報（初回のみ）
+  // グループ情報 + 自分のメンバーID（初回のみ）
   useEffect(() => {
-    fetch("/api/groups").then((r) => r.ok ? r.json() : []).then((groups) => {
+    Promise.all([
+      fetch("/api/groups").then((r) => r.ok ? r.json() : []),
+      fetch("/api/me").then((r) => r.ok ? r.json() : null),
+    ]).then(([groups, me]) => {
       if (Array.isArray(groups)) {
         const g = groups.find((x: Group) => x.id === groupId);
-        if (g) setGroup(g);
+        if (g) {
+          setGroup(g);
+          if (me?.id) {
+            const m = g.members.find((mem: Member) => mem.user.id === me.id);
+            if (m) setMyMemberId(m.id);
+          }
+        }
       }
     }).finally(() => setLoading(false));
   }, [groupId]);
@@ -265,6 +275,7 @@ export default function GroupAnalyticsPage() {
         lineRows={topLineRows}
         lineMembers={topLineMembers}
         formatLineTooltip={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
+        myMemberId={myMemberId}
       />
 
       {/* クエスト種別フィルター */}
@@ -293,6 +304,7 @@ export default function GroupAnalyticsPage() {
         lineRows={completionLineRows}
         lineMembers={completionLineMembers}
         formatLineTooltip={(v) => `${v} 件`}
+        myMemberId={myMemberId}
       />
     </div>
   );
@@ -309,6 +321,7 @@ function AnalysisSection({
   granularity, onGranularityChange,
   pieData, formatPieValue,
   lineRows, lineMembers, formatLineTooltip,
+  myMemberId,
 }: {
   title: string;
   toggleButtons?: React.ReactNode;
@@ -322,6 +335,7 @@ function AnalysisSection({
   lineRows: LineRow[];
   lineMembers: LineMember[];
   formatLineTooltip: (v: number | string) => string;
+  myMemberId: string | null;
 }) {
   return (
     <div className="space-y-3">
@@ -353,21 +367,33 @@ function AnalysisSection({
               <PieChart>
                 <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%"
                   outerRadius={90} startAngle={90} endAngle={-270} label={false}>
-                  {pieData.map((entry, i) => (
-                    <Cell key={entry.id} fill={MEMBER_COLORS[i % MEMBER_COLORS.length]} />
-                  ))}
+                  {pieData.map((entry, i) => {
+                    const isMe = entry.id === myMemberId;
+                    return (
+                      <Cell key={entry.id}
+                        fill={MEMBER_COLORS[i % MEMBER_COLORS.length]}
+                        stroke={isMe ? "#fff" : "none"}
+                        strokeWidth={isMe ? 3 : 0}
+                        opacity={isMe ? 1 : 0.65} />
+                    );
+                  })}
                 </Pie>
                 <Tooltip formatter={(v, name) => [formatPieValue(v as number), name]} />
               </PieChart>
             </ResponsiveContainer>
             <ul className="space-y-2 flex-1 min-w-0">
-              {pieData.map((entry, i) => (
-                <li key={entry.id} className="flex items-center gap-2 text-sm">
-                  <span className="inline-block w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
-                  <span className="flex-1 truncate text-gray-700">{entry.name}</span>
-                  <span className="font-bold shrink-0" style={{ color: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>{entry.label}</span>
-                </li>
-              ))}
+              {pieData.map((entry, i) => {
+                const isMe = entry.id === myMemberId;
+                return (
+                  <li key={entry.id} className={`flex items-center gap-2 text-sm ${isMe ? "font-bold" : ""}`}>
+                    <span className="inline-block w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
+                    <span className={`flex-1 truncate ${isMe ? "text-gray-900" : "text-gray-700"}`}>
+                      {entry.name}{isMe && " 👤"}
+                    </span>
+                    <span className="font-bold shrink-0" style={{ color: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>{entry.label}</span>
+                  </li>
+                );
+              })}
             </ul>
           </>
         )}
@@ -406,10 +432,16 @@ function AnalysisSection({
                       label={{ value: `${mm}月`, fontSize: 10, fill: "#94a3b8", position: "insideTopLeft" }} />
                   );
                 })}
-              {lineMembers.map((mp, i) => (
-                <Line key={mp.memberId} type="linear" dataKey={mp.name}
-                  stroke={MEMBER_COLORS[i % MEMBER_COLORS.length]} strokeWidth={2} dot={false} />
-              ))}
+              {lineMembers.map((mp, i) => {
+                const isMe = mp.memberId === myMemberId;
+                return (
+                  <Line key={mp.memberId} type="linear" dataKey={mp.name}
+                    stroke={MEMBER_COLORS[i % MEMBER_COLORS.length]}
+                    strokeWidth={isMe ? 3 : 1.5}
+                    dot={isMe ? { r: 3 } : false}
+                    strokeOpacity={isMe ? 1 : 0.45} />
+                );
+              })}
             </LineChart>
           </ResponsiveContainer>
         </div>
