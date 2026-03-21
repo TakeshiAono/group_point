@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { formatPoint, type PointGroup } from "@/lib/pointFormat";
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip,
+  LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip,
   CartesianGrid, Legend, ResponsiveContainer,
 } from "recharts";
 
@@ -50,8 +50,6 @@ type AnalyticsData = {
 };
 
 // ─── 定数 ───────────────────────────────────────────────────
-const DEFAULT_POINT_GROUP: PointGroup = { pointUnit: "pt", laborCostPerHour: 0, timeUnit: "HOUR" };
-
 const MEMBER_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"];
 
 // ─── メインページ ────────────────────────────────────────────
@@ -84,7 +82,6 @@ export default function GroupAnalyticsPage() {
 
   // ── ポイントランキング ──────────────────────────────────────
   const sortedMembers = [...group.members].sort((a, b) => b.memberPoints - a.memberPoints);
-  const maxPoints = Math.max(...group.members.map((m) => m.memberPoints), 1);
 
   // ── 完了数ランキング ──────────────────────────────────────
   const completedQuests = quests.filter((q) => q.status === "COMPLETED");
@@ -108,46 +105,56 @@ export default function GroupAnalyticsPage() {
         <h2 className="text-2xl font-bold text-gray-800">グループ分析</h2>
       </div>
 
-      {/* ポイントランキング */}
+      {/* ポイントランキング（円グラフ） */}
       <div className="space-y-3">
-        <SubTitle>保有ポイントランキング</SubTitle>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-          {sortedMembers.map((m, i) => (
-            <div key={m.id} className="flex items-center gap-3">
-              <span className={`text-sm font-bold w-6 ${i === 0 ? "text-yellow-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-300"}`}>
-                {i + 1}
-              </span>
-              <span className="text-xs text-gray-700 w-28 shrink-0 truncate">
-                {m.user.name ?? m.user.email}
-              </span>
-              <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${(m.memberPoints / maxPoints) * 100}%`, backgroundColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }}
-                />
-              </div>
-              <span className="text-xs font-bold w-24 text-right shrink-0" style={{ color: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>
-                {formatPoint(m.memberPoints, pg)}
-              </span>
-            </div>
-          ))}
+        <SubTitle>保有ポイント分布</SubTitle>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-6">
+          <ResponsiveContainer width={220} height={220}>
+            <PieChart>
+              <Pie data={sortedMembers.map((m, i) => ({ name: m.user.name ?? m.user.email, value: m.memberPoints, color: MEMBER_COLORS[i % MEMBER_COLORS.length] }))} dataKey="value" cx="50%" cy="50%" outerRadius={90} label={false}>
+                {sortedMembers.map((m, i) => (
+                  <Cell key={m.id} fill={MEMBER_COLORS[i % MEMBER_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(v) => formatPoint(Number(v), pg)} />
+            </PieChart>
+          </ResponsiveContainer>
+          <ul className="space-y-2 flex-1 min-w-0">
+            {sortedMembers.map((m, i) => (
+              <li key={m.id} className="flex items-center gap-2 text-sm">
+                <span className="inline-block w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
+                <span className="flex-1 truncate text-gray-700">{m.user.name ?? m.user.email}</span>
+                <span className="font-bold shrink-0" style={{ color: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>{formatPoint(m.memberPoints, pg)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
-      {/* 完了数ランキング */}
+      {/* 完了数ランキング（円グラフ） */}
       {completionRanking.length > 0 && (
         <div className="space-y-3">
-          <SubTitle>クエスト完了数ランキング</SubTitle>
-          <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
-            {completionRanking.map(({ member, count }, i) => (
-              <div key={member.id} className="flex items-center gap-3 px-5 py-3">
-                <span className={`text-sm font-bold w-6 ${i === 0 ? "text-yellow-500" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-300"}`}>
-                  {i + 1}
-                </span>
-                <span className="flex-1 text-sm text-gray-700">{member.user.name ?? member.user.email}</span>
-                <span className="text-sm font-bold text-blue-600">{count} 件</span>
-              </div>
-            ))}
+          <SubTitle>クエスト完了数分布</SubTitle>
+          <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-6">
+            <ResponsiveContainer width={220} height={220}>
+              <PieChart>
+                <Pie data={completionRanking.map(({ member, count }, i) => ({ name: member.user.name ?? member.user.email, value: count, color: MEMBER_COLORS[i % MEMBER_COLORS.length] }))} dataKey="value" cx="50%" cy="50%" outerRadius={90} label={false}>
+                  {completionRanking.map(({ member }, i) => (
+                    <Cell key={member.id} fill={MEMBER_COLORS[i % MEMBER_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => `${v} 件`} />
+              </PieChart>
+            </ResponsiveContainer>
+            <ul className="space-y-2 flex-1 min-w-0">
+              {completionRanking.map(({ member, count }, i) => (
+                <li key={member.id} className="flex items-center gap-2 text-sm">
+                  <span className="inline-block w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
+                  <span className="flex-1 truncate text-gray-700">{member.user.name ?? member.user.email}</span>
+                  <span className="font-bold shrink-0" style={{ color: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>{count} 件</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}
