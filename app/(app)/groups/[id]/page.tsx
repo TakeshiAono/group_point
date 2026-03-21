@@ -17,7 +17,7 @@ type Member = {
 type Group = {
   id: string;
   name: string;
-  totalIssuedPoints: number;
+  totalIssuedPoints?: number; // ADMIN/LEADERのみ返される
   members: Member[];
 };
 
@@ -91,9 +91,6 @@ export default function GroupDetailPage() {
               </span>
             )}
           </div>
-          <div className="mt-2 flex gap-6 text-sm text-gray-500">
-            <span>流通ポイント合計: <strong className="text-gray-700">{totalCirculating} pt</strong></span>
-          </div>
         </section>
 
         {/* クエストへのリンク */}
@@ -110,14 +107,16 @@ export default function GroupDetailPage() {
           </div>
         </Link>
 
-        {/* 政府発行済みポイント管理 */}
-        <IssuedPointsEditor
-          groupId={id}
-          totalIssuedPoints={group.totalIssuedPoints}
-          totalCirculating={totalCirculating}
-          isAdmin={myRole === "ADMIN"}
-          onUpdated={(v) => setGroup((prev) => prev ? { ...prev, totalIssuedPoints: v } : prev)}
-        />
+        {/* 政府発行済みポイント管理（ADMIN/LEADERのみ） */}
+        {group.totalIssuedPoints !== undefined && (
+          <IssuedPointsEditor
+            groupId={id}
+            totalIssuedPoints={group.totalIssuedPoints}
+            totalCirculating={totalCirculating}
+            isAdmin={myRole === "ADMIN"}
+            onUpdated={(v) => setGroup((prev) => prev ? { ...prev, totalIssuedPoints: v } : prev)}
+          />
+        )}
 
         {/* 管理人 */}
         <MemberSection

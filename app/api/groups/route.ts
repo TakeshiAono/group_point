@@ -19,7 +19,15 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json(groups);
+  const response = groups.map((group) => {
+    const myMember = group.members.find((m) => m.user.id === session.user!.id);
+    const isPrivileged = myMember?.role === "ADMIN" || myMember?.role === "LEADER";
+    if (isPrivileged) return group;
+    const { totalIssuedPoints: _, ...rest } = group;
+    return rest;
+  });
+
+  return NextResponse.json(response);
 }
 
 // グループ作成（作成者がADMINになる）

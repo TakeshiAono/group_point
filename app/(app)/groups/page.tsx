@@ -12,7 +12,7 @@ type Member = {
 type Group = {
   id: string;
   name: string;
-  totalIssuedPoints: number;
+  totalIssuedPoints?: number;
   members: Member[];
 };
 
@@ -93,9 +93,11 @@ export default function GroupsPage() {
                       メンバー {g.members.length}人
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    政府発行済みポイント: {g.totalIssuedPoints} pt
-                  </p>
+                  {g.totalIssuedPoints !== undefined && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      政府発行済みポイント: {g.totalIssuedPoints} pt
+                    </p>
+                  )}
                 </Link>
               </li>
             ))}
