@@ -394,6 +394,7 @@ export default function QuestDetailPage() {
             groupId={groupId}
             questId={questId}
             members={members}
+            myMemberId={myMember?.id ?? ""}
             questPointReward={quest.pointReward}
             usedPointReward={quest.subQuests.reduce((s, sq) => s + sq.pointReward, 0)}
             onAdded={(sq) => setQuest((prev) => prev ? { ...prev, subQuests: [...prev.subQuests, sq] } : prev)}
@@ -550,6 +551,7 @@ function AddSubQuestForm({
   groupId,
   questId,
   members,
+  myMemberId,
   questPointReward,
   usedPointReward,
   onAdded,
@@ -557,6 +559,7 @@ function AddSubQuestForm({
   groupId: string;
   questId: string;
   members: GroupMember[];
+  myMemberId: string;
   questPointReward: number;
   usedPointReward: number;
   onAdded: (sq: SubQuest) => void;
@@ -627,7 +630,10 @@ function AddSubQuestForm({
         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
       >
         <option value="">担当者を選択（任意）</option>
-        {members.map((m) => (
+        {myMemberId && (
+          <option value={myMemberId}>自分</option>
+        )}
+        {members.filter((m) => m.id !== myMemberId).map((m) => (
           <option key={m.id} value={m.id}>
             {m.user.name ?? m.user.email}
           </option>
