@@ -124,7 +124,9 @@ model Quest {
   /// 依頼完了者（GroupMember.id）
   completerId String?
   /// 締め切り日時（任意）
-  deadline    DateTime?
+  deadline         DateTime?
+  /// 実際に支払われたポイント（完了時に確定）
+  actualPaidPoints Int?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   group       Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)

@@ -39,7 +39,11 @@ export async function GET(
     return NextResponse.json({ error: "クエストが見つかりません" }, { status: 404 });
   }
 
-  return NextResponse.json(quest);
+  const [extra] = await prisma.$queryRaw<{ actualPaidPoints: number | null }[]>`
+    SELECT "actualPaidPoints" FROM "Quest" WHERE id = ${questId}
+  `;
+
+  return NextResponse.json({ ...quest, actualPaidPoints: extra?.actualPaidPoints ?? null });
 }
 
 // クエスト編集（発行者のみ）
