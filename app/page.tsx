@@ -1,5 +1,6 @@
 import { auth, signOut } from "@/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export default async function HomePage() {
   const session = await auth();
@@ -34,11 +35,21 @@ export default async function HomePage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-          ようこそ、{session.user?.name ?? session.user?.email} さん
-        </h2>
-        <p className="text-gray-500">ログインに成功しました。</p>
+      <main className="max-w-4xl mx-auto px-6 py-12 space-y-8">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+            ようこそ、{session.user?.name ?? session.user?.email} さん
+          </h2>
+          <p className="text-gray-500">ログインに成功しました。</p>
+        </div>
+        <nav className="flex gap-4">
+          <Link
+            href="/groups"
+            className="px-5 py-3 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition"
+          >
+            グループ管理
+          </Link>
+        </nav>
       </main>
     </div>
   );

@@ -10,5 +10,13 @@ export const authConfig: NextAuthConfig = {
     authorized({ auth }) {
       return !!auth?.user;
     },
+    jwt({ token, user }) {
+      if (user) token.id = user.id;
+      return token;
+    },
+    session({ session, token }) {
+      if (token.id) session.user.id = token.id as string;
+      return session;
+    },
   },
 };
