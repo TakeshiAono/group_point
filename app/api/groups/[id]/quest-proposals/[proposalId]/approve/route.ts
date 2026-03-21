@@ -38,6 +38,8 @@ export async function POST(
   // 政府の未割当ポイントを確認
   const body = await req.json().catch(() => ({}));
   const pointReward: number = typeof body.pointReward === "number" ? body.pointReward : proposal.pointReward;
+  const title: string = body.title?.trim() || proposal.title;
+  const description: string | null = body.description !== undefined ? (body.description?.trim() || null) : proposal.description;
 
   const group = await prisma.group.findUnique({ where: { id: groupId } });
   const members = await prisma.groupMember.findMany({ where: { groupId } });
@@ -65,8 +67,8 @@ export async function POST(
       data: {
         groupId,
         creatorId: approver.id,
-        title: proposal.title,
-        description: proposal.description,
+        title,
+        description,
         pointReward,
         questType: "GOVERNMENT",
         deadline: proposal.deadline,

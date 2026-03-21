@@ -175,8 +175,10 @@ function ProposalCard({
   onRejected: (id: string, p: QuestProposal) => void;
 }) {
   const [showActions, setShowActions] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
+  const [approveTitle, setApproveTitle] = useState(proposal.title);
+  const [approveDescription, setApproveDescription] = useState(proposal.description ?? "");
   const [approvePoints, setApprovePoints] = useState(0);
+  const [rejectReason, setRejectReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -187,7 +189,7 @@ function ProposalCard({
       const res = await fetch(`/api/groups/${groupId}/quest-proposals/${proposal.id}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pointReward: approvePoints }),
+        body: JSON.stringify({ title: approveTitle, description: approveDescription, pointReward: approvePoints }),
       });
       const data = await parseJson(res);
       if (!res.ok) {
@@ -259,19 +261,35 @@ function ProposalCard({
             </button>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">承認時の報酬ポイント</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      value={approvePoints}
-                      onChange={(e) => setApprovePoints(Number(e.target.value))}
-                      min={1}
-                      className="w-24 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    />
-                    <span className="text-sm text-gray-500">pt</span>
-                  </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">タイトル</label>
+                <input
+                  type="text"
+                  value={approveTitle}
+                  onChange={(e) => setApproveTitle(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">説明</label>
+                <textarea
+                  value={approveDescription}
+                  onChange={(e) => setApproveDescription(e.target.value)}
+                  rows={2}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">報酬ポイント</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={approvePoints}
+                    onChange={(e) => setApprovePoints(Number(e.target.value))}
+                    min={1}
+                    className="w-24 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                  <span className="text-sm text-gray-500">pt</span>
                 </div>
               </div>
               <div>
