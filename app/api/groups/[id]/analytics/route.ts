@@ -7,8 +7,13 @@ function toMonth(date: Date): string {
 }
 
 function toWeek(date: Date): string {
-  const month = String(date.getMonth() + 1).padStart(2, "0");
   const weekOfMonth = Math.ceil(date.getDate() / 7);
+  if (weekOfMonth >= 5) {
+    const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+    const nm = String(nextMonth.getMonth() + 1).padStart(2, "0");
+    return `${nm}-w1`;
+  }
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${month}-w${weekOfMonth}`;
 }
 
