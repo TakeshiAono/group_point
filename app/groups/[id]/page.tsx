@@ -100,10 +100,18 @@ export default function GroupDetailPage() {
             )}
           </div>
           <div className="mt-2 flex gap-6 text-sm text-gray-500">
-            <span>政府発行済みポイント: <strong className="text-gray-700">{group.totalIssuedPoints} pt</strong></span>
             <span>流通ポイント合計: <strong className="text-gray-700">{totalCirculating} pt</strong></span>
           </div>
         </section>
+
+        {/* 政府発行済みポイント管理 */}
+        <IssuedPointsEditor
+          groupId={id}
+          totalIssuedPoints={group.totalIssuedPoints}
+          totalCirculating={totalCirculating}
+          isAdmin={myRole === "ADMIN"}
+          onUpdated={(v) => setGroup((prev) => prev ? { ...prev, totalIssuedPoints: v } : prev)}
+        />
 
         {/* 管理人 */}
         <MemberSection
@@ -280,6 +288,141 @@ function InviteForm({ groupId, role }: { groupId: string; role: "LEADER" | "MEMB
       </form>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       {success && <p className="mt-2 text-sm text-green-600">{success}</p>}
+    </div>
+  );
+}
+
+function IssuedPointsEditor({
+  groupId,
+  totalIssuedPoints,
+  totalCirculating,
+  isAdmin,
+  onUpdated,
+}: {
+  groupId: string;
+  totalIssuedPoints: number;
+  totalCirculating: number;
+  isAdmin: boolean;
+  onUpdated: (v: number) => void;
+}) {
+  const reclaimable = totalIssuedPoints - totalCirculating;
+
+  async function sendDelta(delta: number, amount: number, setError: (e: string) => void, setSaving: (b: boolean) => void, setAmount: (v: number) => void) {
+    setError("");
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/groups/${groupId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ delta }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "エラーが発生しました");
+        return;
+      }
+      onUpdated(data.totalIssuedPoints);
+      setAmount(0);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
+      <h3 className="font-semibold text-gray-800">政府発行済みポイント</h3>
+
+      {/* 現在の状態 */}
+      <div className="flex gap-6 text-sm">
+        <div>
+          <p className="text-gray-400 text-xs mb-0.5">発行済み</p>
+          <p className="text-2xl font-bold text-gray-800">{totalIssuedPoints} pt</p>
+        </div>
+        <div>
+          <p className="text-gray-400 text-xs mb-0.5">流通中</p>
+          <p className="text-2xl font-bold text-blue-600">{totalCirculating} pt</p>
+        </div>
+        <div>
+          <p className="text-gray-400 text-xs mb-0.5">未流通（回収可能）</p>
+          <p className="text-2xl font-bold text-green-600">{reclaimable} pt</p>
+        </div>
+      </div>
+
+      {isAdmin && (
+        <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+          <DeltaForm
+            label="追加発行"
+            buttonLabel="発行する"
+            buttonClass="bg-blue-600 hover:bg-blue-700"
+            min={1}
+            sign={1}
+            onSubmit={sendDelta}
+          />
+          <DeltaForm
+            label={`回収（最大 ${reclaimable} pt）`}
+            buttonLabel="回収する"
+            buttonClass="bg-red-500 hover:bg-red-600"
+            min={1}
+            max={reclaimable}
+            sign={-1}
+            onSubmit={sendDelta}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function DeltaForm({
+  label,
+  buttonLabel,
+  buttonClass,
+  min,
+  max,
+  sign,
+  onSubmit,
+}: {
+  label: string;
+  buttonLabel: string;
+  buttonClass: string;
+  min: number;
+  max?: number;
+  sign: 1 | -1;
+  onSubmit: (delta: number, amount: number, setError: (e: string) => void, setSaving: (b: boolean) => void, setAmount: (v: number) => void) => void;
+}) {
+  const [amount, setAmount] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (amount <= 0) return;
+    onSubmit(sign * amount, amount, setError, setSaving, setAmount);
+  }
+
+  return (
+    <div>
+      <p className="text-sm font-medium text-gray-700 mb-2">{label}</p>
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <input
+          type="number"
+          min={min}
+          max={max}
+          value={amount || ""}
+          onChange={(e) => setAmount(Number(e.target.value))}
+          placeholder="pt"
+          className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          required
+        />
+        <button
+          type="submit"
+          disabled={saving || (max !== undefined && max <= 0)}
+          className={`px-4 py-2 text-white text-sm rounded-lg disabled:opacity-50 transition ${buttonClass}`}
+        >
+          {saving ? "..." : buttonLabel}
+        </button>
+      </form>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );
 }
