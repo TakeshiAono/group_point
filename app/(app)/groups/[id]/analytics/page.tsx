@@ -73,6 +73,7 @@ export default function GroupAnalyticsPage() {
   const [questTypeFilter, setQuestTypeFilter] = useState<Set<"GOVERNMENT" | "MEMBER">>(
     () => new Set(loadStorage().questTypes ?? ["GOVERNMENT", "MEMBER"])
   );
+  const [topN, setTopN] = useState<"all" | 3 | 5 | 10>(() => loadStorage().topN ?? "all");
 
   // localStorage 保存
   useEffect(() => {
@@ -81,10 +82,11 @@ export default function GroupAnalyticsPage() {
         topGranularity, topBucket, topPieMode,
         bottomGranularity, bottomBucket,
         questTypes: Array.from(questTypeFilter),
+        topN,
       }));
     } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topGranularity, topBucket, topPieMode, bottomGranularity, bottomBucket, questTypeFilter]);
+  }, [topGranularity, topBucket, topPieMode, bottomGranularity, bottomBucket, questTypeFilter, topN]);
 
   function toggleQuestType(type: "GOVERNMENT" | "MEMBER") {
     setQuestTypeFilter((prev) => {
@@ -288,19 +290,31 @@ export default function GroupAnalyticsPage() {
         lineMembers={topLineMembers}
         formatLineTooltip={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
         myMemberId={myMemberId}
+        topN={topN}
       />
 
-      {/* クエスト種別フィルター */}
-      <div className="flex items-center gap-4 bg-white border border-blue-100 rounded-xl px-5 py-3">
-        <span className="text-xs text-gray-500 shrink-0">クエスト種別フィルター</span>
-        {(["GOVERNMENT", "MEMBER"] as const).map((type) => (
-          <label key={type} className="flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" checked={questTypeFilter.has(type)} onChange={() => toggleQuestType(type)}
-              className="w-3.5 h-3.5 accent-blue-600" />
-            <span className="text-xs text-gray-700">{type === "GOVERNMENT" ? "管理側" : "メンバー"}</span>
-          </label>
-        ))}
-        <span className="text-xs text-gray-400 ml-auto">↓ 以下のグラフに反映</span>
+      {/* 共通フィルター */}
+      <div className="bg-white border border-blue-100 rounded-xl px-5 py-3 space-y-2">
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="text-xs text-gray-500 shrink-0">表示人数</span>
+          {(["all", 3, 5, 10] as const).map((n) => (
+            <button key={n} onClick={() => setTopN(n)}
+              className={`px-3 py-1 text-xs rounded-full border transition ${topN === n ? "bg-blue-600 text-white border-blue-600" : "text-gray-600 border-gray-300 hover:border-blue-400"}`}>
+              {n === "all" ? "全員" : `トップ${n}`}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="text-xs text-gray-500 shrink-0">クエスト種別</span>
+          {(["GOVERNMENT", "MEMBER"] as const).map((type) => (
+            <label key={type} className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={questTypeFilter.has(type)} onChange={() => toggleQuestType(type)}
+                className="w-3.5 h-3.5 accent-blue-600" />
+              <span className="text-xs text-gray-700">{type === "GOVERNMENT" ? "管理側" : "メンバー"}</span>
+            </label>
+          ))}
+          <span className="text-xs text-gray-400 ml-auto">↓ 以下の完了数グラフに反映</span>
+        </div>
       </div>
 
       {/* 下部：フィルター依存 */}
@@ -317,6 +331,7 @@ export default function GroupAnalyticsPage() {
         lineMembers={completionLineMembers}
         formatLineTooltip={(v) => `${v} 件`}
         myMemberId={myMemberId}
+        topN={topN}
       />
     </div>
   );
@@ -333,7 +348,7 @@ function AnalysisSection({
   granularity, onGranularityChange,
   pieData, formatPieValue,
   lineRows, lineMembers, formatLineTooltip,
-  myMemberId,
+  myMemberId, topN,
 }: {
   title: string;
   toggleButtons?: React.ReactNode;
@@ -348,7 +363,18 @@ function AnalysisSection({
   lineMembers: LineMember[];
   formatLineTooltip: (v: number | string) => string;
   myMemberId: string | null;
+  topN: "all" | 3 | 5 | 10;
 }) {
+  const limit = topN === "all" ? pieData.length : topN;
+  const displayedPie = pieData.slice(0, limit);
+  const displayedIds = new Set(displayedPie.map((e) => e.id));
+  const displayedLineMembers = lineMembers.filter((m) => displayedIds.has(m.memberId));
+  const displayedLineRows = lineRows.map((row) => {
+    const r: LineRow = { month: row.month };
+    displayedLineMembers.forEach((m) => { r[m.name] = row[m.name]; });
+    return r;
+  });
+
   return (
     <div className="space-y-3">
       {/* タイトル行 */}
@@ -371,15 +397,15 @@ function AnalysisSection({
           </select>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-6">
-        {pieData.length === 0 ? (
+        {displayedPie.length === 0 ? (
           <p className="text-sm text-gray-400 py-8 text-center w-full">該当データなし</p>
         ) : (
           <>
             <ResponsiveContainer width={220} height={220}>
               <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                <Pie data={displayedPie} dataKey="value" nameKey="name" cx="50%" cy="50%"
                   outerRadius={90} startAngle={90} endAngle={-270} label={false}>
-                  {pieData.map((entry, i) => {
+                  {displayedPie.map((entry, i) => {
                     const isMe = entry.id === myMemberId;
                     return (
                       <Cell key={entry.id}
@@ -394,7 +420,7 @@ function AnalysisSection({
               </PieChart>
             </ResponsiveContainer>
             <ul className="space-y-2 flex-1 min-w-0">
-              {pieData.map((entry, i) => {
+              {displayedPie.map((entry, i) => {
                 const isMe = entry.id === myMemberId;
                 return (
                   <li key={entry.id} className={`flex items-center gap-2 text-sm ${isMe ? "font-bold" : ""}`}>
@@ -413,7 +439,7 @@ function AnalysisSection({
       </div>
 
       {/* 折れ線グラフ（粒度ドロップダウン付き） */}
-      {lineRows.length >= 1 && lineMembers.length > 0 && (
+      {displayedLineRows.length >= 1 && displayedLineMembers.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-end">
             <select
@@ -426,17 +452,17 @@ function AnalysisSection({
             </select>
           </div>
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={lineRows}>
+            <LineChart data={displayedLineRows}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }}
                 tickFormatter={(v: string) => granularity === "week" ? v.slice(5) : v} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v, name) => [formatLineTooltip(v as number), name]} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              {granularity === "week" && lineRows
+              {granularity === "week" && displayedLineRows
                 .filter((row) => String(row.month).endsWith("-w1"))
                 .map((row) => {
-                  const mmw1 = String(row.month).slice(5); // mm-w1
+                  const mmw1 = String(row.month).slice(5);
                   const mm = mmw1.replace("-w1", "");
                   return (
                     <ReferenceLine key={String(row.month)} x={String(row.month)}
@@ -444,7 +470,7 @@ function AnalysisSection({
                       label={{ value: `${mm}月`, fontSize: 10, fill: "#94a3b8", position: "insideTopLeft" }} />
                   );
                 })}
-              {lineMembers.map((mp, i) => {
+              {displayedLineMembers.map((mp, i) => {
                 const isMe = mp.memberId === myMemberId;
                 return (
                   <Line key={mp.memberId} type="linear" dataKey={mp.name}
