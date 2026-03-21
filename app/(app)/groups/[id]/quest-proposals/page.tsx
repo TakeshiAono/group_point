@@ -18,8 +18,6 @@ type QuestProposal = {
   id: string;
   title: string;
   description: string | null;
-  pointReward: number;
-  deadline: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
   rejectReason: string | null;
   proposer: ProposalMember;
@@ -178,7 +176,7 @@ function ProposalCard({
 }) {
   const [showActions, setShowActions] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [approvePoints, setApprovePoints] = useState(proposal.pointReward);
+  const [approvePoints, setApprovePoints] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -231,7 +229,7 @@ function ProposalCard({
               {STATUS_LABEL[proposal.status]}
             </span>
             <span className="text-xs text-gray-400">
-              提案者: {proposal.proposer.user.name ?? proposal.proposer.user.email}
+              提案者: {proposal.proposer?.user?.name ?? proposal.proposer?.user?.email ?? "不明"}
             </span>
             <span className="text-xs text-gray-400">
               {new Date(proposal.createdAt).toLocaleDateString("ja-JP")}
@@ -241,20 +239,11 @@ function ProposalCard({
           {proposal.description && (
             <p className="text-sm text-gray-500 mt-1">{proposal.description}</p>
           )}
-          {proposal.deadline && (
-            <p className="text-xs text-gray-400 mt-1">
-              希望期限: {new Date(proposal.deadline).toLocaleDateString("ja-JP")}
-            </p>
-          )}
           {proposal.status === "REJECTED" && proposal.rejectReason && (
             <p className="text-xs text-red-500 mt-1 bg-red-50 px-2 py-1 rounded">
               却下理由: {proposal.rejectReason}
             </p>
           )}
-        </div>
-        <div className="text-right shrink-0">
-          <p className="text-lg font-bold text-blue-600">{proposal.pointReward} pt</p>
-          <p className="text-xs text-gray-400">希望報酬</p>
         </div>
       </div>
 
@@ -337,8 +326,6 @@ function CreateProposalForm({
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [pointReward, setPointReward] = useState(0);
-  const [deadline, setDeadline] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -350,7 +337,7 @@ function CreateProposalForm({
       const res = await fetch(`/api/groups/${groupId}/quest-proposals`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, pointReward, deadline: deadline || undefined }),
+        body: JSON.stringify({ title, description }),
       });
       const data = await parseJson(res);
       if (!res.ok) {
@@ -387,27 +374,6 @@ function CreateProposalForm({
           rows={3}
           className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
         />
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            value={pointReward || ""}
-            onChange={(e) => setPointReward(Number(e.target.value))}
-            placeholder="希望報酬"
-            min={1}
-            className="w-32 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            required
-          />
-          <span className="text-sm text-gray-500">pt（政府が調整する場合あり）</span>
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">希望期限（任意）</label>
-          <input
-            type="date"
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
-            className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-        </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex gap-3">
           <button

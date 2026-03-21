@@ -43,13 +43,10 @@ export async function POST(
   }
 
   const { id: groupId } = await params;
-  const { title, description, pointReward, deadline } = await req.json();
+  const { title, description } = await req.json();
 
   if (!title?.trim()) {
     return NextResponse.json({ error: "タイトルは必須です" }, { status: 400 });
-  }
-  if (typeof pointReward !== "number" || !Number.isInteger(pointReward) || pointReward <= 0) {
-    return NextResponse.json({ error: "希望報酬は1以上の整数で指定してください" }, { status: 400 });
   }
 
   const member = await prisma.groupMember.findUnique({
@@ -65,8 +62,7 @@ export async function POST(
       proposerId: member.id,
       title: title.trim(),
       description: description?.trim() ?? null,
-      pointReward,
-      deadline: deadline ? new Date(deadline) : null,
+      pointReward: 0,
     },
     include: {
       proposer: { include: { user: { select: { id: true, name: true, email: true } } } },
