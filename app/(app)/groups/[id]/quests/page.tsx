@@ -69,7 +69,7 @@ export default function QuestsPage() {
 
   // デフォルト: 完了(COMPLETED)のみ非表示
   const [visibleStatuses, setVisibleStatuses] = useState<Set<Quest["status"]>>(
-    new Set(["OPEN", "IN_PROGRESS", "CANCELLED"])
+    new Set(["OPEN", "IN_PROGRESS"])
   );
 
   function toggleStatus(s: Quest["status"]) {
