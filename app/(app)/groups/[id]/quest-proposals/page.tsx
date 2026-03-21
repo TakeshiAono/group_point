@@ -360,7 +360,7 @@ function CreateProposalForm({
   return (
     <div className="bg-white border border-blue-200 rounded-xl p-6 space-y-4">
       <div>
-        <h3 className="font-semibold text-gray-800">公共事業クエストを提案</h3>
+        <h3 className="font-semibold text-gray-800">クエストを提案</h3>
         <p className="text-xs text-gray-500 mt-1">
           管理者が審査し、承認されると正式なクエストとして発行されます
         </p>
