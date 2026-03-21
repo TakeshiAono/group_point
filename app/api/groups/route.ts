@@ -23,12 +23,9 @@ export async function GET() {
     const myMember = group.members.find((m) => m.user.id === session.user!.id);
     const isPrivileged = myMember?.role === "ADMIN" || myMember?.role === "LEADER";
     if (isPrivileged) return group;
-    // MEMBERには発行済みポイントと ADMIN・LEADER のメンバー情報を返さない
+    // MEMBERには発行済みポイント情報を返さない
     const { totalIssuedPoints: _, ...rest } = group;
-    return {
-      ...rest,
-      members: group.members.filter((m) => m.role === "MEMBER"),
-    };
+    return rest;
   });
 
   return NextResponse.json(response);

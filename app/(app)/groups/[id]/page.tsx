@@ -59,9 +59,6 @@ export default function GroupDetailPage() {
   const myMember = group.members.find((m) => m.user.id === myUserId);
   const myRole = myMember?.role ?? "MEMBER";
 
-  const admins = group.members.filter((m) => m.role === "ADMIN");
-  const leaders = group.members.filter((m) => m.role === "LEADER");
-  const regularMembers = group.members.filter((m) => m.role === "MEMBER");
   const totalCirculating = group.members.reduce((sum, m) => sum + m.memberPoints, 0);
 
   function removeMember(removedId: string) {
@@ -118,33 +115,15 @@ export default function GroupDetailPage() {
           />
         )}
 
-        {/* 管理人 */}
+        {/* メンバー一覧（全員） */}
         <MemberSection
-          title="管理人（ADMIN）"
-          members={admins}
+          title="メンバー"
+          members={group.members}
           groupId={id}
           canDelete={canDelete}
           onRemoved={removeMember}
-        />
-
-        {/* 政府関係者 */}
-        <MemberSection
-          title="政府関係者（LEADER）"
-          members={leaders}
-          groupId={id}
-          canDelete={canDelete}
-          onRemoved={removeMember}
-          inviteRole={myRole === "ADMIN" ? "LEADER" : undefined}
-        />
-
-        {/* 一般メンバー */}
-        <MemberSection
-          title="一般メンバー"
-          members={regularMembers}
-          groupId={id}
-          canDelete={canDelete}
-          onRemoved={removeMember}
-          inviteRole={myRole === "ADMIN" || myRole === "LEADER" ? "MEMBER" : undefined}
+          inviteLeaderRole={myRole === "ADMIN" ? "LEADER" : undefined}
+          inviteMemberRole={myRole === "ADMIN" || myRole === "LEADER" ? "MEMBER" : undefined}
         />
 
         {/* ポイント付与（ADMINのみ） */}
@@ -178,14 +157,16 @@ function MemberSection({
   groupId,
   canDelete,
   onRemoved,
-  inviteRole,
+  inviteLeaderRole,
+  inviteMemberRole,
 }: {
   title: string;
   members: Member[];
   groupId: string;
   canDelete: (m: Member) => boolean;
   onRemoved: (id: string) => void;
-  inviteRole?: "LEADER" | "MEMBER";
+  inviteLeaderRole?: "LEADER";
+  inviteMemberRole?: "MEMBER";
 }) {
   return (
     <section className="space-y-3">
@@ -206,7 +187,8 @@ function MemberSection({
           ))}
         </ul>
       )}
-      {inviteRole && <InviteForm groupId={groupId} role={inviteRole} />}
+      {inviteLeaderRole && <InviteForm groupId={groupId} role={inviteLeaderRole} />}
+      {inviteMemberRole && <InviteForm groupId={groupId} role={inviteMemberRole} />}
     </section>
   );
 }
@@ -237,12 +219,17 @@ function MemberRow({
 
   return (
     <li className="bg-white border border-gray-200 rounded-lg px-5 py-3 flex items-center justify-between">
-      <div>
+      <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-800">
           {member.user.name ?? member.user.email}
         </span>
         {member.user.name && (
-          <span className="ml-2 text-xs text-gray-400">{member.user.email}</span>
+          <span className="text-xs text-gray-400">{member.user.email}</span>
+        )}
+        {member.role !== "MEMBER" && (
+          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${ROLE_BADGE[member.role]}`}>
+            {ROLE_LABEL[member.role]}
+          </span>
         )}
       </div>
       <div className="flex items-center gap-3">
