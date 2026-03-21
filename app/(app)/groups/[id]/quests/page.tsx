@@ -66,36 +66,57 @@ export default function QuestsPage() {
   }, [groupId]);
 
   const canCreateGov = myMember?.role === "ADMIN" || myMember?.role === "LEADER";
+  const [statusFilter, setStatusFilter] = useState<"ALL" | Quest["status"]>("IN_PROGRESS");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "GOVERNMENT" | "MEMBER">("ALL");
 
-  // デフォルト: 完了(COMPLETED)のみ非表示
-  const [visibleStatuses, setVisibleStatuses] = useState<Set<Quest["status"]>>(
-    new Set(["OPEN", "IN_PROGRESS"])
+  const filtered = quests.filter(
+    (q) =>
+      (typeFilter === "ALL" || q.questType === typeFilter) &&
+      (statusFilter === "ALL" || q.status === statusFilter)
   );
-
-  function toggleStatus(s: Quest["status"]) {
-    setVisibleStatuses((prev) => {
-      const next = new Set(prev);
-      next.has(s) ? next.delete(s) : next.add(s);
-      return next;
-    });
-  }
-
-  const filteredByTab = quests.filter((q) => q.questType === tab);
-  const filtered = filteredByTab.filter((q) => visibleStatuses.has(q.status));
 
   return (
     <div>
       <main className="max-w-4xl mx-auto px-6 py-10 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="text-2xl font-bold text-gray-800">クエスト一覧</h2>
-          {myMember && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
-            >
-              + クエストを発行
-            </button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {(["IN_PROGRESS", "OPEN", "COMPLETED", "CANCELLED", "ALL"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1.5 text-xs rounded-full border transition ${
+                  statusFilter === s
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "text-gray-600 border-gray-300 hover:border-blue-400"
+                }`}
+              >
+                {s === "ALL" ? "すべて" : STATUS_LABEL[s]}
+              </button>
+            ))}
+            <span className="w-px bg-gray-200 mx-1" />
+            {(["ALL", "GOVERNMENT", "MEMBER"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setTypeFilter(f)}
+                className={`px-3 py-1.5 text-xs rounded-full border transition ${
+                  typeFilter === f
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "text-gray-600 border-gray-300 hover:border-blue-400"
+                }`}
+              >
+                {f === "ALL" ? "種別：すべて" : f === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
+              </button>
+            ))}
+            {myMember && (
+              <button
+                onClick={() => setShowForm(true)}
+                className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-full hover:bg-blue-700 transition"
+              >
+                + 発行
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 保有ポイント表示 */}
@@ -114,8 +135,7 @@ export default function QuestsPage() {
             onCreated={(q) => {
               setQuests((prev) => [q, ...prev]);
               setShowForm(false);
-              setTab(q.questType);
-              // メンバー案件の場合は自分のポイントを更新
+              setTypeFilter(q.questType);
               if (q.questType === "MEMBER") {
                 setMyMember((prev) => prev ? { ...prev, memberPoints: prev.memberPoints - q.pointReward } : prev);
               }
@@ -124,49 +144,11 @@ export default function QuestsPage() {
           />
         )}
 
-        {/* タブ */}
-        <div className="flex gap-2 border-b border-gray-200">
-          {(["GOVERNMENT", "MEMBER"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
-                tab === t
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {t === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
-              <span className="ml-1.5 text-xs text-gray-400">
-                {quests.filter((q) => q.questType === t && visibleStatuses.has(q.status)).length}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* ステータスフィルター */}
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs text-gray-400">表示:</span>
-          {(["OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const).map((s) => (
-            <label key={s} className="flex items-center gap-1.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={visibleStatuses.has(s)}
-                onChange={() => toggleStatus(s)}
-                className="rounded"
-              />
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[s]}`}>
-                {STATUS_LABEL[s]}
-              </span>
-            </label>
-          ))}
-        </div>
-
         {/* クエスト一覧 */}
         {filtered.length === 0 ? (
           <p className="text-gray-400 text-sm py-8 text-center">該当するクエストがありません</p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-2">
             {filtered.map((q) => <QuestCard key={q.id} quest={q} groupId={groupId} />)}
           </ul>
         )}
@@ -180,33 +162,29 @@ function QuestCard({ quest, groupId }: { quest: Quest; groupId: string }) {
     && new Date(quest.deadline) < new Date();
 
   return (
-    <li className="bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition">
-      <Link href={`/groups/${groupId}/quests/${quest.id}`} className="block">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[quest.status]}`}>
-                {STATUS_LABEL[quest.status]}
-              </span>
-              <span className="text-xs text-gray-400">
-                by {quest.creator.user.name ?? quest.creator.user.email}
-              </span>
-            </div>
-            <p className="font-medium text-gray-800">{quest.title}</p>
-            {quest.description && (
-              <p className="text-sm text-gray-500 mt-1">{quest.description}</p>
-            )}
+    <li>
+      <Link
+        href={`/groups/${groupId}/quests/${quest.id}`}
+        className="bg-white border border-gray-200 rounded-xl px-5 py-3 flex items-center justify-between gap-4 hover:shadow-md hover:border-blue-200 transition"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[quest.status]}`}>
+              {STATUS_LABEL[quest.status]}
+            </span>
+            <span className="text-xs text-gray-400">
+              {quest.questType === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
+            </span>
             {quest.deadline && (
-              <p className={`text-xs mt-1 ${isOverdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
+              <span className={`text-xs ${isOverdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
                 期限: {new Date(quest.deadline).toLocaleDateString("ja-JP")}
-                {isOverdue && "（期限超過）"}
-              </p>
+                {isOverdue && "（超過）"}
+              </span>
             )}
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-lg font-bold text-blue-600">{quest.pointReward} pt</p>
-          </div>
+          <p className="text-sm font-medium text-gray-800 truncate">{quest.title}</p>
         </div>
+        <p className="text-base font-bold text-blue-600 shrink-0">{quest.pointReward} pt</p>
       </Link>
     </li>
   );
