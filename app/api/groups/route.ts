@@ -10,6 +10,7 @@ export async function GET() {
   }
 
   const groups = await prisma.group.findMany({
+    where: { members: { some: { userId: session.user.id } } },
     include: {
       members: {
         include: { user: { select: { id: true, name: true, email: true } } },
