@@ -6,7 +6,7 @@ import Link from "next/link";
 import { formatPoint, type PointGroup } from "@/lib/pointFormat";
 import {
   LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip,
-  CartesianGrid, Legend, ResponsiveContainer,
+  CartesianGrid, Legend, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 
 // ─── 型定義 ─────────────────────────────────────────────────
@@ -410,6 +410,13 @@ function AnalysisSection({
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v, name) => [formatLineTooltip(v as number), name]} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
+              {granularity === "week" && lineRows
+                .filter((row) => String(row.month).endsWith("-w1"))
+                .map((row) => (
+                  <ReferenceLine key={String(row.month)} x={String(row.month)}
+                    stroke="#94a3b8" strokeDasharray="4 2"
+                    label={{ value: String(row.month).replace("-w1", "月"), fontSize: 10, fill: "#94a3b8", position: "insideTopLeft" }} />
+                ))}
               {lineMembers.map((mp, i) => (
                 <Line key={mp.memberId} type="linear" dataKey={mp.name}
                   stroke={MEMBER_COLORS[i % MEMBER_COLORS.length]} strokeWidth={2} dot={false} />
