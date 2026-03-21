@@ -28,8 +28,8 @@ export async function PATCH(
     }
     const data: Record<string, unknown> = {};
     if (pointUnit !== undefined) {
-      if (pointUnit !== "pt" && pointUnit !== "円") {
-        return NextResponse.json({ error: "pointUnitはptまたは円を指定してください" }, { status: 400 });
+      if (!["pt", "時間", "円"].includes(pointUnit)) {
+        return NextResponse.json({ error: "pointUnitはpt・時間・円を指定してください" }, { status: 400 });
       }
       data.pointUnit = pointUnit;
     }

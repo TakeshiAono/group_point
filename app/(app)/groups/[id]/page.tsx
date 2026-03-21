@@ -24,11 +24,16 @@ type Group = {
   members: Member[];
 };
 
+const TIME_UNIT_LABEL: Record<string, string> = { HOUR: "人・時間", WEEK: "人・週", MONTH: "人・月" };
+const TIME_UNIT_HOURS: Record<string, number> = { HOUR: 1, WEEK: 40, MONTH: 160 };
+
 // ポイントを表示用にフォーマット
 function formatPoint(points: number, group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">): string {
+  if (group.pointUnit === "時間") {
+    return `${points.toLocaleString("ja-JP")} ${TIME_UNIT_LABEL[group.timeUnit] ?? "人・時間"}`;
+  }
   if (group.pointUnit === "円" && group.laborCostPerHour > 0) {
-    const hoursMap: Record<string, number> = { HOUR: 1, WEEK: 40, MONTH: 160 };
-    const hours = hoursMap[group.timeUnit] ?? 1;
+    const hours = TIME_UNIT_HOURS[group.timeUnit] ?? 1;
     const yen = points * hours * group.laborCostPerHour;
     return `${yen.toLocaleString("ja-JP")} 円`;
   }
@@ -547,8 +552,6 @@ function IssuedPointsEditor({
     }
   }
 
-  const TIME_UNIT_LABEL: Record<string, string> = { HOUR: "時間・人", WEEK: "週・人", MONTH: "月・人" };
-
   return (
     <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
       <div className="flex items-center justify-between">
@@ -571,37 +574,41 @@ function IssuedPointsEditor({
             <div>
               <p className="text-xs text-gray-500 mb-1">表示単位</p>
               <div className="flex gap-2">
-                {(["pt", "円"] as const).map((u) => (
-                  <label key={u} className="flex items-center gap-1.5 cursor-pointer text-sm">
-                    <input type="radio" checked={pointUnit === u} onChange={() => setPointUnit(u)} />
-                    {u}
+                {([["pt", "pt"], ["時間", "人・時間"], ["円", "円"]] as const).map(([val, label]) => (
+                  <label key={val} className="flex items-center gap-1.5 cursor-pointer text-sm">
+                    <input type="radio" checked={pointUnit === val} onChange={() => setPointUnit(val)} />
+                    {label}
                   </label>
                 ))}
               </div>
             </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">時間単位（1pt =）</p>
-              <select
-                value={timeUnit}
-                onChange={(e) => setTimeUnit(e.target.value)}
-                className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                {Object.entries(TIME_UNIT_LABEL).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">人件費（円/時間）</p>
-              <input
-                type="number"
-                min={0}
-                value={laborCost || ""}
-                onChange={(e) => setLaborCost(Number(e.target.value))}
-                placeholder="例: 3000"
-                className="w-32 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-            </div>
+            {(pointUnit === "時間" || pointUnit === "円") && (
+              <div>
+                <p className="text-xs text-gray-500 mb-1">時間単位（1pt =）</p>
+                <select
+                  value={timeUnit}
+                  onChange={(e) => setTimeUnit(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  {Object.entries(TIME_UNIT_LABEL).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {pointUnit === "円" && (
+              <div>
+                <p className="text-xs text-gray-500 mb-1">人件費（円/時間）</p>
+                <input
+                  type="number"
+                  min={0}
+                  value={laborCost || ""}
+                  onChange={(e) => setLaborCost(Number(e.target.value))}
+                  placeholder="例: 1200"
+                  className="w-32 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+            )}
             <div className="flex gap-2">
               <button
                 type="submit"
@@ -619,13 +626,10 @@ function IssuedPointsEditor({
               </button>
             </div>
           </div>
-          {pointUnit === "円" && (
-            <p className="text-xs text-gray-400">
-              1pt = 1{TIME_UNIT_LABEL[timeUnit]} × {laborCost.toLocaleString()} 円/時間
-              {timeUnit === "WEEK" ? " × 40時間" : timeUnit === "MONTH" ? " × 160時間" : ""}
-              {" = "}{formatPoint(1, { pointUnit: "円", laborCostPerHour: laborCost, timeUnit })}
-            </p>
-          )}
+          <p className="text-xs text-gray-400">
+            {pointUnit === "時間" && `例: 1200 pt → ${formatPoint(1200, { pointUnit: "時間", laborCostPerHour: laborCost, timeUnit })}`}
+            {pointUnit === "円" && laborCost > 0 && `例: 1200 pt → ${formatPoint(1200, { pointUnit: "円", laborCostPerHour: laborCost, timeUnit })}`}
+          </p>
           {settingsError && <p className="text-xs text-red-600">{settingsError}</p>}
         </form>
       )}
