@@ -61,7 +61,10 @@ export async function POST(
   const [updatedProposal, quest] = await prisma.$transaction([
     prisma.questProposal.update({
       where: { id: proposalId },
-      data: { status: "APPROVED" },
+      data: { status: "APPROVED", title, description },
+      include: {
+        proposer: { include: { user: { select: { id: true, name: true, email: true } } } },
+      },
     }),
     prisma.quest.create({
       data: {
