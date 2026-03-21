@@ -35,6 +35,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             案件一覧
           </Link>
           <Link
+            href="/subquests"
+            className="text-sm text-gray-600 hover:text-blue-600 transition"
+          >
+            サブクエスト一覧
+          </Link>
+          <Link
             href="/profile"
             className="text-sm text-gray-600 hover:text-blue-600 transition"
           >
