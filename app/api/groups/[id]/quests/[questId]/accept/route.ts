@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { addQuestLog } from "@/lib/questLog";
 
 type Params = { params: Promise<{ id: string; questId: string }> };
 
@@ -49,6 +50,9 @@ export async function POST(_req: Request, { params }: Params) {
       },
     },
   });
+
+  const memberName = updated.completer?.user.name ?? updated.completer?.user.email ?? "不明";
+  await addQuestLog({ questId, memberId: member.id, action: "ACCEPTED", detail: `${memberName} がクエストを受注しました` });
 
   return NextResponse.json(updated);
 }

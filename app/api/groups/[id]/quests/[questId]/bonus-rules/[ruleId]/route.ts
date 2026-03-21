@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { addQuestLog } from "@/lib/questLog";
 
 type Params = { params: Promise<{ id: string; questId: string; ruleId: string }> };
 
@@ -36,7 +37,15 @@ export async function DELETE(_req: Request, { params }: Params) {
     return NextResponse.json({ error: "ルールが見つかりません" }, { status: 404 });
   }
 
+  const [ruleDetail] = await prisma.$queryRaw<{ thresholdPercent: number; bonusRate: number }[]>`
+    SELECT "thresholdPercent", "bonusRate" FROM "BonusRule" WHERE id = ${ruleId}
+  `;
   await prisma.$executeRaw`DELETE FROM "BonusRule" WHERE id = ${ruleId}`;
+
+  if (ruleDetail) {
+    const rateText = ruleDetail.bonusRate > 0 ? `+${ruleDetail.bonusRate}%` : `${ruleDetail.bonusRate}%`;
+    await addQuestLog({ questId, memberId: member.id, action: "BONUS_RULE_DELETED", detail: `ボーナスルールが削除されました（期間の ${ruleDetail.thresholdPercent}% → ${rateText}）` });
+  }
 
   return NextResponse.json({ success: true });
 }

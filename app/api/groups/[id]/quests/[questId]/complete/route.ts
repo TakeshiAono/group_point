@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { addQuestLog } from "@/lib/questLog";
 
 type Params = { params: Promise<{ id: string; questId: string }> };
 
@@ -150,6 +151,11 @@ export async function POST(_req: Request, { params }: Params) {
       },
     },
   });
+
+  const bonusDetail = appliedRule
+    ? `（ボーナス/ペナルティ ${appliedRule.bonusRate > 0 ? "+" : ""}${appliedRule.bonusRate}% 適用）`
+    : "";
+  await addQuestLog({ questId, memberId: member.id, action: "COMPLETED", detail: `クエストが完了しました${bonusDetail}` });
 
   return NextResponse.json({
     ...updated,

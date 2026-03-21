@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { addQuestLog } from "@/lib/questLog";
 
 // サブクエスト一覧取得
 export async function GET(
@@ -103,6 +104,10 @@ export async function POST(
       assignee: { include: { user: { select: { id: true, name: true, email: true } } } },
     },
   });
+
+  const assigneeName = subQuest.assignee?.user.name ?? subQuest.assignee?.user.email;
+  const assigneeText = assigneeName ? `（担当: ${assigneeName}）` : "";
+  await addQuestLog({ questId, memberId: member.id, action: "SUBQUEST_ADDED", detail: `サブクエスト「${subQuest.title}」が追加されました${assigneeText}` });
 
   return NextResponse.json(subQuest, { status: 201 });
 }

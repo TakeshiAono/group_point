@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { addQuestLog } from "@/lib/questLog";
 
 type Params = { params: Promise<{ id: string; questId: string }> };
 
@@ -68,6 +69,9 @@ export async function POST(req: Request, { params }: Params) {
     VALUES (gen_random_uuid()::text, ${questId}, ${thresholdPercent}, ${bonusRate}, NOW(), NOW())
     RETURNING id, "questId", "thresholdPercent", "bonusRate", "createdAt"
   `;
+
+  const rateText = rule.bonusRate > 0 ? `+${rule.bonusRate}%` : `${rule.bonusRate}%`;
+  await addQuestLog({ questId, memberId: member.id, action: "BONUS_RULE_ADDED", detail: `ボーナスルールが追加されました（期間の ${rule.thresholdPercent}% → ${rateText}）` });
 
   return NextResponse.json(rule, { status: 201 });
 }

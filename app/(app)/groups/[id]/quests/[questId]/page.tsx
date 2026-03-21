@@ -324,6 +324,9 @@ export default function QuestDetailPage() {
         )}
       </div>
 
+      {/* アクティビティログ */}
+      <QuestLogSection groupId={groupId} questId={questId} />
+
     </div>
   );
 }
@@ -599,5 +602,46 @@ function AddSubQuestForm({
         {submitting ? "追加中..." : "追加する"}
       </button>
     </form>
+  );
+}
+
+type QuestLogEntry = {
+  id: string;
+  action: string;
+  detail: string;
+  createdAt: string;
+  memberName: string | null;
+  memberEmail: string | null;
+};
+
+function QuestLogSection({ groupId, questId }: { groupId: string; questId: string }) {
+  const [logs, setLogs] = useState<QuestLogEntry[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/groups/${groupId}/quests/${questId}/logs`)
+      .then((r) => r.ok ? r.json() : [])
+      .then(setLogs);
+  }, [groupId, questId]);
+
+  if (logs.length === 0) return null;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-3">
+      <h3 className="font-semibold text-gray-800">アクティビティログ</h3>
+      <ul className="space-y-2">
+        {logs.map((log) => (
+          <li key={log.id} className="flex items-start gap-3 text-sm">
+            <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-gray-300 mt-2" />
+            <div className="flex-1 min-w-0">
+              <p className="text-gray-700">{log.detail}</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {log.memberName ?? log.memberEmail ?? "システム"}
+                　{new Date(log.createdAt).toLocaleString("ja-JP")}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
