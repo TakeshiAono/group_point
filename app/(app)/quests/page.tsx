@@ -14,6 +14,7 @@ type Quest = {
   questType: "GOVERNMENT" | "MEMBER";
   status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   creator: QuestMember;
+  completer: QuestMember | null;
   createdAt: string;
 };
 
@@ -35,62 +36,50 @@ const STATUS_COLOR: Record<Quest["status"], string> = {
 
 type GroupWithQuests = Group & { quests: Quest[] };
 
-export default function AllQuestsPage() {
+export default function MyQuestsPage() {
   const [groupsWithQuests, setGroupsWithQuests] = useState<GroupWithQuests[]>([]);
+  const [myId, setMyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"ALL" | "GOVERNMENT" | "MEMBER">("ALL");
 
   useEffect(() => {
-    fetch("/api/groups")
-      .then((r) => r.ok ? r.json() : [])
-      .then(async (groups: Group[]) => {
-        if (!Array.isArray(groups)) return;
-        const results = await Promise.all(
-          groups.map(async (g) => {
-            const quests = await fetch(`/api/groups/${g.id}/quests`)
-              .then((r) => r.ok ? r.json() : []);
-            return { ...g, quests: Array.isArray(quests) ? quests : [] };
-          })
-        );
-        setGroupsWithQuests(results);
-      })
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch("/api/me").then((r) => r.ok ? r.json() : null),
+      fetch("/api/groups").then((r) => r.ok ? r.json() : []),
+    ]).then(async ([me, groups]) => {
+      if (!me?.id || !Array.isArray(groups)) return;
+      setMyId(me.id);
+      const results = await Promise.all(
+        groups.map(async (g: Group) => {
+          const quests = await fetch(`/api/groups/${g.id}/quests`)
+            .then((r) => r.ok ? r.json() : []);
+          return { ...g, quests: Array.isArray(quests) ? quests : [] };
+        })
+      );
+      // 自分が受注した案件のみ絞り込む
+      setGroupsWithQuests(
+        results.map((g) => ({
+          ...g,
+          quests: g.quests.filter((q: Quest) => q.completer?.user.id === me.id),
+        })).filter((g) => g.quests.length > 0)
+      );
+    }).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="p-10 text-gray-500">読み込み中...</div>;
 
-  const filtered = groupsWithQuests
-    .map((g) => ({
-      ...g,
-      quests: g.quests.filter((q) => filter === "ALL" || q.questType === filter),
-    }))
-    .filter((g) => g.quests.length > 0);
+  const total = groupsWithQuests.reduce((sum, g) => sum + g.quests.length, 0);
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-10 space-y-8">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800">案件一覧</h2>
-        <div className="flex gap-2">
-          {(["ALL", "GOVERNMENT", "MEMBER"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-xs rounded-full border transition ${
-                filter === f
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "text-gray-600 border-gray-300 hover:border-blue-400"
-              }`}
-            >
-              {f === "ALL" ? "すべて" : f === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center gap-3">
+        <h2 className="text-2xl font-bold text-gray-800">受注案件一覧</h2>
+        <span className="text-sm text-gray-400">{total}件</span>
       </div>
 
-      {filtered.length === 0 ? (
-        <p className="text-gray-400 text-sm py-8 text-center">案件がありません</p>
+      {groupsWithQuests.length === 0 ? (
+        <p className="text-gray-400 text-sm py-8 text-center">受注中の案件はありません</p>
       ) : (
-        filtered.map((g) => (
+        groupsWithQuests.map((g) => (
           <section key={g.id} className="space-y-3">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-gray-700">{g.name}</h3>
@@ -98,7 +87,7 @@ export default function AllQuestsPage() {
                 href={`/groups/${g.id}/quests`}
                 className="text-xs text-blue-500 hover:text-blue-700"
               >
-                詳細 →
+                案件一覧 →
               </Link>
             </div>
             <ul className="space-y-2">
@@ -117,6 +106,9 @@ export default function AllQuestsPage() {
                       </span>
                     </div>
                     <p className="text-sm font-medium text-gray-800 truncate">{q.title}</p>
+                    {q.description && (
+                      <p className="text-xs text-gray-400 truncate mt-0.5">{q.description}</p>
+                    )}
                   </div>
                   <p className="text-base font-bold text-blue-600 shrink-0">{q.pointReward} pt</p>
                 </li>

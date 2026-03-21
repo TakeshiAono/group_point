@@ -32,7 +32,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             href="/quests"
             className="text-sm text-gray-600 hover:text-blue-600 transition"
           >
-            案件一覧
+            受注案件一覧
           </Link>
           <Link
             href="/profile"
