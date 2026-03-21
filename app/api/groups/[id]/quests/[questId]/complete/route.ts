@@ -87,13 +87,7 @@ export async function POST(_req: Request, { params }: Params) {
       data: { status: "COMPLETED" },
     });
 
-    // 受注者（completer）にクエスト報酬を付与
-    await tx.groupMember.update({
-      where: { id: member.id },
-      data: { memberPoints: { increment: quest.pointReward } },
-    });
-
-    // アサイン済みサブクエストの担当者にポイントを付与
+    // アサイン済みサブクエストの担当者にポイントを付与（報酬はサブクエスト経由のみ）
     for (const sq of assignedSubQuests) {
       if (sq.assigneeId && sq.pointReward > 0) {
         await tx.groupMember.update({
