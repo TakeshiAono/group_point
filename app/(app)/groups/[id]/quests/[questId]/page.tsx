@@ -246,9 +246,13 @@ export default function QuestDetailPage() {
         )}
       </div>
 
-      {/* ボーナス・ペナルティルール（発行者のみ） */}
-      {myMember && quest.creator.id === myMember.id && quest.deadline && (
-        <BonusRulesSection groupId={groupId} questId={questId} />
+      {/* ボーナス・ペナルティルール（全員閲覧可・発行者のみ編集） */}
+      {quest.deadline && myMember && (
+        <BonusRulesSection
+          groupId={groupId}
+          questId={questId}
+          canEdit={quest.creator.id === myMember.id}
+        />
       )}
 
       {/* サブクエスト */}
@@ -326,7 +330,7 @@ export default function QuestDetailPage() {
 
 type BonusRule = { id: string; thresholdPercent: number; bonusRate: number };
 
-function BonusRulesSection({ groupId, questId }: { groupId: string; questId: string }) {
+function BonusRulesSection({ groupId, questId, canEdit }: { groupId: string; questId: string; canEdit: boolean }) {
   const [rules, setRules] = useState<BonusRule[]>([]);
   const [threshold, setThreshold] = useState<number | "">("");
   const [rate, setRate] = useState<number | "">("");
@@ -389,18 +393,20 @@ function BonusRulesSection({ groupId, questId }: { groupId: string; questId: str
                   {r.bonusRate > 0 ? `+${r.bonusRate}%` : `${r.bonusRate}%`}
                 </span>
               </div>
-              <button
-                onClick={() => handleDelete(r.id)}
-                className="text-xs text-red-400 hover:text-red-600 transition"
-              >
-                削除
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => handleDelete(r.id)}
+                  className="text-xs text-red-400 hover:text-red-600 transition"
+                >
+                  削除
+                </button>
+              )}
             </li>
           ))}
         </ul>
       )}
 
-      <form onSubmit={handleAdd} className="border-t border-gray-100 pt-4 space-y-3">
+      {canEdit && <form onSubmit={handleAdd} className="border-t border-gray-100 pt-4 space-y-3">
         <p className="text-xs font-medium text-gray-600">ルールを追加</p>
         <div className="flex flex-wrap gap-3 items-end">
           <div>
@@ -441,7 +447,7 @@ function BonusRulesSection({ groupId, questId }: { groupId: string; questId: str
           </button>
         </div>
         {error && <p className="text-xs text-red-600">{error}</p>}
-      </form>
+      </form>}
     </div>
   );
 }
