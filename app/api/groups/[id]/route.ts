@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
-// 政府発行済みポイントを加減算（ADMINのみ）
+// 管理側発行済みポイントを加減算（ADMINのみ）
 // delta > 0: 追加発行
 // delta < 0: 回収（流通中のポイントは回収不可）
 export async function PATCH(

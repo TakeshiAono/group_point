@@ -35,7 +35,7 @@ export async function POST(
 
   // LEADERはMEMBERしか招待できない
   if (inviterMember.role === "LEADER" && role === "LEADER") {
-    return NextResponse.json({ error: "政府関係者の招待はADMINのみ実行できます" }, { status: 403 });
+    return NextResponse.json({ error: "管理側メンバーの招待はADMINのみ実行できます" }, { status: 403 });
   }
 
   // 招待対象ユーザーを検索

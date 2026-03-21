@@ -105,7 +105,7 @@ export default function QuestsPage() {
                     : "text-gray-600 border-gray-300 hover:border-blue-400"
                 }`}
               >
-                {f === "ALL" ? "種別：すべて" : f === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
+                {f === "ALL" ? "種別：すべて" : f === "GOVERNMENT" ? "管理側案件" : "メンバー案件"}
               </button>
             ))}
             {myMember && (
@@ -173,7 +173,7 @@ function QuestCard({ quest, groupId }: { quest: Quest; groupId: string }) {
               {STATUS_LABEL[quest.status]}
             </span>
             <span className="text-xs text-gray-400">
-              {quest.questType === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
+              {quest.questType === "GOVERNMENT" ? "管理側案件" : "メンバー案件"}
             </span>
             {quest.deadline && (
               <span className={`text-xs ${isOverdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
@@ -248,7 +248,7 @@ function CreateQuestForm({
               checked={questType === "GOVERNMENT"}
               onChange={() => setQuestType("GOVERNMENT")}
             />
-            <span className="text-sm">政府案件</span>
+            <span className="text-sm">管理側案件</span>
           </label>
         )}
         <label className="flex items-center gap-2 cursor-pointer">

@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 // ポイントを直接付与する（ADMINのみ）
-// 政府の未割当ポイント（発行済み - 流通中 - 政府案件の報酬合計）から充当する
+// 管理側の未割当ポイント（発行済み - 流通中 - 管理側案件の報酬合計）から充当する
 // body: { amount: number, memberId?: string }
 //   memberId あり → 個人付与
 //   memberId なし → グループ全員に付与（合計 = amount × 人数）

@@ -40,7 +40,7 @@ export async function DELETE(
 
   // LEADERはADMIN・LEADERを削除不可
   if (operator.role === "LEADER" && target.role !== "MEMBER") {
-    return NextResponse.json({ error: "政府関係者・管理人の削除はADMINのみ実行できます" }, { status: 403 });
+    return NextResponse.json({ error: "管理側メンバー・管理人の削除はADMINのみ実行できます" }, { status: 403 });
   }
 
   // ADMINは削除不可（グループに必ず1人は必要）

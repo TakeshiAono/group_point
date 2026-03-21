@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { addQuestLog } from "@/lib/questLog";
 
-// 提案を承認して政府案件として発行（ADMIN/LEADERのみ）
+// 提案を承認して管理側案件として発行（ADMIN/LEADERのみ）
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string; proposalId: string }> }
@@ -35,7 +35,7 @@ export async function POST(
     return NextResponse.json({ error: "すでに審査済みの提案です" }, { status: 400 });
   }
 
-  // 政府の未割当ポイントを確認
+  // 管理側の未割当ポイントを確認
   const body = await req.json().catch(() => ({}));
   const pointReward: number = typeof body.pointReward === "number" ? body.pointReward : proposal.pointReward;
   const title: string = body.title?.trim() || proposal.title;
@@ -53,7 +53,7 @@ export async function POST(
 
   if (pointReward > available) {
     return NextResponse.json(
-      { error: `政府の未割当ポイントが不足しています（残り ${available} pt）` },
+      { error: `管理側の未割当ポイントが不足しています（残り ${available} pt）` },
       { status: 400 }
     );
   }

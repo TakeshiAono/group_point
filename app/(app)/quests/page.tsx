@@ -100,7 +100,7 @@ export default function AllQuestsPage() {
                   : "text-gray-600 border-gray-300 hover:border-blue-400"
               }`}
             >
-              {f === "ALL" ? "種別：すべて" : f === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
+              {f === "ALL" ? "種別：すべて" : f === "GOVERNMENT" ? "管理側案件" : "メンバー案件"}
             </button>
           ))}
         </div>
@@ -133,7 +133,7 @@ export default function AllQuestsPage() {
                           {STATUS_LABEL[q.status]}
                         </span>
                         <span className="text-xs text-gray-400">
-                          {q.questType === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
+                          {q.questType === "GOVERNMENT" ? "管理側案件" : "メンバー案件"}
                         </span>
                       </div>
                       <p className="text-sm font-medium text-gray-800 truncate">{q.title}</p>

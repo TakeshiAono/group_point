@@ -209,7 +209,7 @@ export default function QuestDetailPage() {
             {STATUS_LABEL[quest.status]}
           </span>
           <span className="text-xs text-gray-400">
-            {quest.questType === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
+            {quest.questType === "GOVERNMENT" ? "管理側案件" : "メンバー案件"}
           </span>
         </div>
 
@@ -277,7 +277,7 @@ export default function QuestDetailPage() {
           <div className="flex justify-between">
             <dt className="text-gray-400">支払者</dt>
             <dd className="text-gray-700 font-medium">
-              {quest.questType === "GOVERNMENT" ? "政府" : quest.creator.user.name ?? quest.creator.user.email}
+              {quest.questType === "GOVERNMENT" ? "管理側" : quest.creator.user.name ?? quest.creator.user.email}
             </dd>
           </div>
           <div className="flex justify-between">

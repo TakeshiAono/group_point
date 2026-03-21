@@ -124,7 +124,7 @@ const SUB_STATUS_COLOR: Record<SubQuest["status"], string> = {
 
 const ROLE_LABEL: Record<Role, string> = {
   ADMIN: "管理人",
-  LEADER: "政府関係者",
+  LEADER: "管理側メンバー",
   MEMBER: "一般メンバー",
 };
 
@@ -299,7 +299,7 @@ export default function GroupDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-semibold text-gray-800">クエスト</p>
-              <p className="text-xs text-gray-400 mt-0.5">政府案件・メンバー案件の一覧と発行</p>
+              <p className="text-xs text-gray-400 mt-0.5">管理側案件・メンバー案件の一覧と発行</p>
             </div>
             <span className="text-gray-400">→</span>
           </div>
@@ -329,7 +329,7 @@ export default function GroupDetailPage() {
           />
         )}
 
-        {/* 政府発行済みポイント管理（ADMIN/LEADERのみ） */}
+        {/* 管理側発行済みポイント管理（ADMIN/LEADERのみ） */}
         {group.totalIssuedPoints !== undefined && (
           <IssuedPointsEditor
             groupId={id}
@@ -491,7 +491,7 @@ function InviteForm({ groupId, role }: { groupId: string; role: "LEADER" | "MEMB
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const label = role === "LEADER" ? "政府関係者を招待" : "一般メンバーを招待";
+  const label = role === "LEADER" ? "管理側メンバーを招待" : "一般メンバーを招待";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -610,7 +610,7 @@ function IssuedPointsEditor({
   return (
     <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-800">政府発行済みポイント</h3>
+        <h3 className="font-semibold text-gray-800">管理側発行済みポイント</h3>
         {isAdmin && (
           <button
             onClick={() => setSettingsOpen((v) => !v)}

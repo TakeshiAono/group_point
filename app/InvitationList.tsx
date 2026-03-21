@@ -57,7 +57,7 @@ export default function InvitationList() {
               </p>
               <p className="text-xs text-gray-400 mt-0.5">
                 招待者: {inv.inviter.user.name ?? inv.inviter.user.email} ／
-                ロール: {inv.role === "LEADER" ? "政府関係者（LEADER）" : "一般メンバー"}
+                ロール: {inv.role === "LEADER" ? "管理側メンバー（LEADER）" : "一般メンバー"}
               </p>
             </div>
             <div className="flex gap-2 shrink-0">

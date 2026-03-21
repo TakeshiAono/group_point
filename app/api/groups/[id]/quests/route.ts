@@ -28,7 +28,7 @@ export async function GET(
 }
 
 // クエスト作成
-// GOVERNMENT: ADMIN・LEADERのみ。政府の未割当ポイントから報酬を確保
+// GOVERNMENT: ADMIN・LEADERのみ。管理側の未割当ポイントから報酬を確保
 // MEMBER: 全員可。作成者の保有ポイントからエスクロー（即時引落）
 export async function POST(
   req: Request,
@@ -61,13 +61,13 @@ export async function POST(
   }
 
   if (questType === "GOVERNMENT") {
-    // 政府案件：ADMIN・LEADERのみ作成可
+    // 管理側案件：ADMIN・LEADERのみ作成可
     if (creatorMember.role === "MEMBER") {
-      return NextResponse.json({ error: "政府案件の発行はADMIN・LEADERのみ実行できます" }, { status: 403 });
+      return NextResponse.json({ error: "管理側案件の発行はADMIN・LEADERのみ実行できます" }, { status: 403 });
     }
 
-    // 政府の未割当ポイントを計算
-    // 未割当 = 発行済み - 流通中（memberPoints合計）- 既存のオープン政府案件の報酬合計（escrow）
+    // 管理側の未割当ポイントを計算
+    // 未割当 = 発行済み - 流通中（memberPoints合計）- 既存のオープン管理側案件の報酬合計（escrow）
     const group = await prisma.group.findUnique({ where: { id: groupId } });
     const members = await prisma.groupMember.findMany({ where: { groupId } });
     const totalCirculating = members.reduce((sum, m) => sum + m.memberPoints, 0);
@@ -79,7 +79,7 @@ export async function POST(
 
     if (pointReward > available) {
       return NextResponse.json(
-        { error: `政府の未割当ポイントが不足しています（残り ${available} pt）` },
+        { error: `管理側の未割当ポイントが不足しています（残り ${available} pt）` },
         { status: 400 }
       );
     }
