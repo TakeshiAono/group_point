@@ -11,6 +11,7 @@ type SubQuest = {
   id: string;
   title: string;
   status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  deadline: string | null;
   assignee: QuestMember | null;
 };
 
@@ -147,19 +148,35 @@ export default function QuestDetailPage() {
           <p className="text-sm text-gray-400">サブクエストはありません</p>
         ) : (
           <ul className="space-y-2">
-            {quest.subQuests.map((sq) => (
-              <li key={sq.id} className="flex items-center justify-between border border-gray-100 rounded-lg px-4 py-2.5">
-                <div>
-                  <p className="text-sm font-medium text-gray-800">{sq.title}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    担当: {sq.assignee ? sq.assignee.user.name ?? sq.assignee.user.email : "未割当"}
-                  </p>
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[sq.status]}`}>
-                  {STATUS_LABEL[sq.status]}
-                </span>
-              </li>
-            ))}
+            {quest.subQuests.map((sq) => {
+              const sqOverdue = sq.deadline &&
+                sq.status !== "COMPLETED" && sq.status !== "CANCELLED" &&
+                new Date(sq.deadline) < new Date();
+              return (
+                <li key={sq.id} className="border border-gray-100 rounded-lg hover:border-gray-200 transition">
+                  <Link
+                    href={`/groups/${groupId}/quests/${questId}/subquests/${sq.id}`}
+                    className="flex items-center justify-between px-4 py-2.5"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{sq.title}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        担当: {sq.assignee ? sq.assignee.user.name ?? sq.assignee.user.email : "未割当"}
+                        {sq.deadline && (
+                          <span className={`ml-2 ${sqOverdue ? "text-red-500" : ""}`}>
+                            期限: {new Date(sq.deadline).toLocaleDateString("ja-JP")}
+                            {sqOverdue && "（超過）"}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[sq.status]}`}>
+                      {STATUS_LABEL[sq.status]}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
 
@@ -189,6 +206,7 @@ function AddSubQuestForm({
 }) {
   const [title, setTitle] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -200,7 +218,7 @@ function AddSubQuestForm({
       const res = await fetch(`/api/groups/${groupId}/quests/${questId}/subquests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, assigneeId: assigneeId || undefined }),
+        body: JSON.stringify({ title, assigneeId: assigneeId || undefined, deadline: deadline || undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -210,6 +228,7 @@ function AddSubQuestForm({
       onAdded(data);
       setTitle("");
       setAssigneeId("");
+      setDeadline("");
     } finally {
       setSubmitting(false);
     }
@@ -238,6 +257,15 @@ function AddSubQuestForm({
           </option>
         ))}
       </select>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">デッドライン（任意）</label>
+        <input
+          type="date"
+          value={deadline}
+          onChange={(e) => setDeadline(e.target.value)}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+      </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
       <button
         type="submit"

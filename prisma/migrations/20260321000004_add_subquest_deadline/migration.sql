@@ -1,0 +1,1 @@
+ALTER TABLE "SubQuest" ADD COLUMN "deadline" TIMESTAMP(3);

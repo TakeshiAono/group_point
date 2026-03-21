@@ -43,7 +43,7 @@ export async function POST(
   }
 
   const { id: groupId, questId } = await params;
-  const { title, assigneeId } = await req.json();
+  const { title, assigneeId, deadline } = await req.json();
 
   if (!title?.trim()) {
     return NextResponse.json({ error: "タイトルは必須です" }, { status: 400 });
@@ -75,7 +75,7 @@ export async function POST(
   }
 
   const subQuest = await prisma.subQuest.create({
-    data: { questId, title: title.trim(), assigneeId: assigneeId ?? null },
+    data: { questId, title: title.trim(), assigneeId: assigneeId ?? null, deadline: deadline ? new Date(deadline) : null },
     include: {
       assignee: { include: { user: { select: { id: true, name: true, email: true } } } },
     },

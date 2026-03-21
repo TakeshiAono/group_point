@@ -101,6 +101,7 @@ model SubQuest {
   /// 担当メンバー（GroupMember.id）任意
   assigneeId String?
   status     QuestStatus @default(OPEN)
+  deadline   DateTime?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   quest      Quest       @relation(fields: [questId], references: [id], onDelete: Cascade)
