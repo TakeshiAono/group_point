@@ -73,8 +73,6 @@ export default function GroupAnalyticsPage() {
   const [questTypeFilter, setQuestTypeFilter] = useState<Set<"GOVERNMENT" | "MEMBER">>(
     () => new Set(loadStorage().questTypes ?? ["GOVERNMENT", "MEMBER"])
   );
-  const [topN, setTopN] = useState<"all" | 3 | 5 | 10>(() => loadStorage().topN ?? "all");
-
   // localStorage 保存
   useEffect(() => {
     try {
@@ -82,11 +80,10 @@ export default function GroupAnalyticsPage() {
         topGranularity, topBucket, topPieMode,
         bottomGranularity, bottomBucket,
         questTypes: Array.from(questTypeFilter),
-        topN,
       }));
     } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topGranularity, topBucket, topPieMode, bottomGranularity, bottomBucket, questTypeFilter, topN]);
+  }, [topGranularity, topBucket, topPieMode, bottomGranularity, bottomBucket, questTypeFilter]);
 
   function toggleQuestType(type: "GOVERNMENT" | "MEMBER") {
     setQuestTypeFilter((prev) => {
@@ -290,31 +287,19 @@ export default function GroupAnalyticsPage() {
         lineMembers={topLineMembers}
         formatLineTooltip={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
         myMemberId={myMemberId}
-        topN={topN}
       />
 
-      {/* 共通フィルター */}
-      <div className="bg-white border border-blue-100 rounded-xl px-5 py-3 space-y-2">
-        <div className="flex items-center gap-4 flex-wrap">
-          <span className="text-xs text-gray-500 shrink-0">表示人数</span>
-          {(["all", 3, 5, 10] as const).map((n) => (
-            <button key={n} onClick={() => setTopN(n)}
-              className={`px-3 py-1 text-xs rounded-full border transition ${topN === n ? "bg-blue-600 text-white border-blue-600" : "text-gray-600 border-gray-300 hover:border-blue-400"}`}>
-              {n === "all" ? "全員" : `トップ${n}`}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-4 flex-wrap">
-          <span className="text-xs text-gray-500 shrink-0">クエスト種別</span>
-          {(["GOVERNMENT", "MEMBER"] as const).map((type) => (
-            <label key={type} className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={questTypeFilter.has(type)} onChange={() => toggleQuestType(type)}
-                className="w-3.5 h-3.5 accent-blue-600" />
-              <span className="text-xs text-gray-700">{type === "GOVERNMENT" ? "管理側" : "メンバー"}</span>
-            </label>
-          ))}
-          <span className="text-xs text-gray-400 ml-auto">↓ 以下の完了数グラフに反映</span>
-        </div>
+      {/* クエスト種別フィルター */}
+      <div className="flex items-center gap-4 bg-white border border-blue-100 rounded-xl px-5 py-3">
+        <span className="text-xs text-gray-500 shrink-0">クエスト種別フィルター</span>
+        {(["GOVERNMENT", "MEMBER"] as const).map((type) => (
+          <label key={type} className="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" checked={questTypeFilter.has(type)} onChange={() => toggleQuestType(type)}
+              className="w-3.5 h-3.5 accent-blue-600" />
+            <span className="text-xs text-gray-700">{type === "GOVERNMENT" ? "管理側" : "メンバー"}</span>
+          </label>
+        ))}
+        <span className="text-xs text-gray-400 ml-auto">↓ 以下のグラフに反映</span>
       </div>
 
       {/* 下部：フィルター依存 */}
@@ -331,7 +316,6 @@ export default function GroupAnalyticsPage() {
         lineMembers={completionLineMembers}
         formatLineTooltip={(v) => `${v} 件`}
         myMemberId={myMemberId}
-        topN={topN}
       />
     </div>
   );
@@ -348,7 +332,7 @@ function AnalysisSection({
   granularity, onGranularityChange,
   pieData, formatPieValue,
   lineRows, lineMembers, formatLineTooltip,
-  myMemberId, topN,
+  myMemberId,
 }: {
   title: string;
   toggleButtons?: React.ReactNode;
@@ -363,8 +347,8 @@ function AnalysisSection({
   lineMembers: LineMember[];
   formatLineTooltip: (v: number | string) => string;
   myMemberId: string | null;
-  topN: "all" | 3 | 5 | 10;
 }) {
+  const [topN, setTopN] = useState<"all" | 3 | 5 | 10>("all");
   const limit = topN === "all" ? pieData.length : topN;
   const displayedPie = pieData.slice(0, limit);
   const displayedIds = new Set(displayedPie.map((e) => e.id));
@@ -482,6 +466,19 @@ function AnalysisSection({
               })}
             </LineChart>
           </ResponsiveContainer>
+          <div className="flex items-center justify-center gap-2 pt-1">
+            <span className="text-xs text-gray-400">表示人数</span>
+            <select
+              value={topN}
+              onChange={(e) => setTopN(e.target.value === "all" ? "all" : Number(e.target.value) as 3 | 5 | 10)}
+              className="text-xs border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="all">全員</option>
+              <option value={3}>トップ3</option>
+              <option value={5}>トップ5</option>
+              <option value={10}>トップ10</option>
+            </select>
+          </div>
         </div>
       )}
     </div>
