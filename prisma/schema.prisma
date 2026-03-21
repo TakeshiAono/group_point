@@ -46,6 +46,23 @@ model Group {
   invitations       Invitation[]
 }
 
+/// 早期/遅延完了ボーナス・ペナルティルール（クエスト個別設定）
+/// thresholdPercent: 作成日〜納期の期間に対する完了タイミングの割合(%)
+///   例: 80 → 期間の80%以内に完了でボーナス対象
+///       110 → 期間の110%（納期の10%超過）でペナルティ対象
+/// bonusRate: 報酬に対するボーナス/ペナルティ率(%)。正=ボーナス、負=ペナルティ
+model BonusRule {
+  id               String   @id @default(cuid())
+  questId          String
+  thresholdPercent Float
+  bonusRate        Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  quest            Quest    @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@index([questId])
+}
+
 /// グループとユーザーの中間テーブル。ロールとメンバーポイント残高を保持。
 model GroupMember {
   id           String      @id @default(cuid())
@@ -97,6 +114,7 @@ model Quest {
   creator     GroupMember  @relation("QuestCreator", fields: [creatorId], references: [id])
   completer   GroupMember? @relation("QuestCompleter", fields: [completerId], references: [id])
   subQuests   SubQuest[]
+  bonusRules  BonusRule[]
 }
 
 /// クエストに紐づくサブクエスト。メンバーを割り当てて協力を募ることができる。
