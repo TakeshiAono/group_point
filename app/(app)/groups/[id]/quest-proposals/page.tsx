@@ -49,11 +49,21 @@ export default function QuestProposalsPage() {
   const { id: groupId } = useParams<{ id: string }>();
   const [proposals, setProposals] = useState<QuestProposal[]>([]);
   const [myMember, setMyMember] = useState<GroupMember | null>(null);
-  const [tab, setTab] = useState<"PENDING" | "APPROVED" | "REJECTED">("PENDING");
   const [showForm, setShowForm] = useState(false);
+  const [visibleStatuses, setVisibleStatuses] = useState<Set<QuestProposal["status"]>>(
+    new Set(["PENDING"])
+  );
 
   const isAdmin = myMember?.role === "ADMIN" || myMember?.role === "LEADER";
   const isMemberOnly = myMember?.role === "MEMBER";
+
+  function toggleStatus(s: QuestProposal["status"]) {
+    setVisibleStatuses((prev) => {
+      const next = new Set(prev);
+      next.has(s) ? next.delete(s) : next.add(s);
+      return next;
+    });
+  }
 
   useEffect(() => {
     Promise.all([
@@ -70,38 +80,31 @@ export default function QuestProposalsPage() {
     });
   }, [groupId]);
 
-  const filtered = proposals.filter((p) => p.status === tab);
+  const filtered = proposals.filter((p) => visibleStatuses.has(p.status));
 
   function onProposalCreated(p: QuestProposal) {
     setProposals((prev) => [p, ...prev]);
     setShowForm(false);
-    setTab("PENDING");
+    setVisibleStatuses(new Set(["PENDING"]));
   }
 
   function onApproved(proposalId: string, updatedProposal: QuestProposal) {
     setProposals((prev) =>
       prev.map((p) => (p.id === proposalId ? updatedProposal : p))
     );
-    setTab("APPROVED");
   }
 
   function onRejected(proposalId: string, updatedProposal: QuestProposal) {
     setProposals((prev) =>
       prev.map((p) => (p.id === proposalId ? updatedProposal : p))
     );
-    setTab("REJECTED");
   }
 
   return (
     <div>
       <main className="max-w-4xl mx-auto px-6 py-10 space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">管理者へのクエスト提案</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              メンバーからの提案一覧です。管理者が審査・承認します。
-            </p>
-          </div>
+          <h2 className="text-2xl font-bold text-gray-800">管理者へのクエスト提案</h2>
           {isMemberOnly && (
             <button
               onClick={() => setShowForm(true)}
@@ -121,29 +124,30 @@ export default function QuestProposalsPage() {
           />
         )}
 
-        {/* タブ */}
-        <div className="flex gap-2 border-b border-gray-200">
-          {(["PENDING", "APPROVED", "REJECTED"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
-                tab === t
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {STATUS_LABEL[t]}
-              <span className="ml-1.5 text-xs text-gray-400">
-                {proposals.filter((p) => p.status === t).length}
+        {/* ステータスフィルター */}
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs text-gray-400">表示:</span>
+          {(["PENDING", "APPROVED", "REJECTED"] as const).map((s) => (
+            <label key={s} className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={visibleStatuses.has(s)}
+                onChange={() => toggleStatus(s)}
+                className="rounded"
+              />
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[s]}`}>
+                {STATUS_LABEL[s]}
+                <span className="ml-1 text-gray-400">
+                  {proposals.filter((p) => p.status === s).length}
+                </span>
               </span>
-            </button>
+            </label>
           ))}
         </div>
 
         {/* 提案一覧 */}
         {filtered.length === 0 ? (
-          <p className="text-gray-400 text-sm py-8 text-center">提案がありません</p>
+          <p className="text-gray-400 text-sm py-8 text-center">該当する提案がありません</p>
         ) : (
           <ul className="space-y-3">
             {filtered.map((p) => (
@@ -255,9 +259,9 @@ function ProposalCard({
   );
 
   return (
-    <li className="bg-white border border-gray-200 rounded-xl px-6 py-4 space-y-3">
+    <li className="bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition space-y-3">
       {proposal.status === "APPROVED" && proposal.questId ? (
-        <Link href={`/groups/${groupId}/quests/${proposal.questId}`} className="block hover:opacity-80 transition">
+        <Link href={`/groups/${groupId}/quests/${proposal.questId}`} className="block">
           {cardContent}
         </Link>
       ) : (
