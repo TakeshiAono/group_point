@@ -184,21 +184,6 @@ export default function GroupDetailPage() {
     .reduce((sum, q) => sum + q.pointReward, 0);
   const totalCirculating = memberPointsTotal + allocatedQuestPoints;
 
-  function removeMember(removedId: string) {
-    setGroup((prev) =>
-      prev ? { ...prev, members: prev.members.filter((x) => x.id !== removedId) } : prev
-    );
-  }
-
-  // 操作者が対象メンバーを削除できるか
-  function canDelete(target: Member): boolean {
-    if (target.user.id === myUserId) return false; // 自分自身は不可
-    if (target.role === "ADMIN") return false;      // ADMINは削除不可
-    if (myRole === "ADMIN") return true;            // ADMINはLEADER・MEMBERを削除可
-    if (myRole === "LEADER") return target.role === "MEMBER"; // LEADERはMEMBERのみ
-    return false;
-  }
-
   return (
     <div>
       <main className="max-w-4xl mx-auto px-6 py-10 space-y-8">
@@ -371,188 +356,20 @@ export default function GroupDetailPage() {
           />
         )}
 
-        {/* メンバー一覧（全員） */}
-        <MemberSection
-          title="メンバー"
-          members={[...group.members].sort((a, b) => {
-            const order = { ADMIN: 0, LEADER: 1, MEMBER: 2 };
-            return order[a.role] - order[b.role];
-          })}
-          groupId={id}
-          canDelete={canDelete}
-          onRemoved={removeMember}
-          inviteRoles={[
-            ...(myRole === "ADMIN" ? ["LEADER" as const] : []),
-            ...(myRole === "ADMIN" || myRole === "LEADER" ? ["MEMBER" as const] : []),
-          ]}
-          pointGroup={group}
-        />
-      </main>
-    </div>
-  );
-}
-
-function MemberSection({
-  title,
-  members,
-  groupId,
-  canDelete,
-  onRemoved,
-  inviteRoles,
-  pointGroup,
-}: {
-  title: string;
-  members: Member[];
-  groupId: string;
-  canDelete: (m: Member) => boolean;
-  onRemoved: (id: string) => void;
-  inviteRoles: ("LEADER" | "MEMBER")[];
-  pointGroup: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
-}) {
-  return (
-    <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <h3 className="font-semibold text-gray-700">{title}</h3>
-        {members.length > 0 && <span className="text-gray-400 text-sm">{members.length}人</span>}
-      </div>
-      {members.length > 0 && (
-        <ul className="space-y-2">
-          {members.map((m) => (
-            <MemberRow
-              key={m.id}
-              member={m}
-              groupId={groupId}
-              deletable={canDelete(m)}
-              onRemoved={onRemoved}
-              pointGroup={pointGroup}
-            />
-          ))}
-        </ul>
-      )}
-      {inviteRoles.length > 0 && <InviteForm groupId={groupId} availableRoles={inviteRoles} />}
-    </section>
-  );
-}
-
-function MemberRow({
-  member,
-  groupId,
-  deletable,
-  onRemoved,
-  pointGroup,
-}: {
-  member: Member;
-  groupId: string;
-  deletable: boolean;
-  onRemoved: (id: string) => void;
-  pointGroup: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
-}) {
-  const [removing, setRemoving] = useState(false);
-
-  async function handleRemove() {
-    if (!confirm(`${member.user.name ?? member.user.email} を削除しますか？`)) return;
-    setRemoving(true);
-    try {
-      await fetch(`/api/groups/${groupId}/members/${member.id}`, { method: "DELETE" });
-      onRemoved(member.id);
-    } finally {
-      setRemoving(false);
-    }
-  }
-
-  return (
-    <li className="bg-white border border-gray-200 rounded-lg px-5 py-3 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-800">
-          {member.user.name ?? member.user.email}
-        </span>
-        {member.user.name && (
-          <span className="text-xs text-gray-400">{member.user.email}</span>
-        )}
-        {member.role !== "MEMBER" && (
-          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${ROLE_BADGE[member.role]}`}>
-            {ROLE_LABEL[member.role]}
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-600">{formatPoint(member.memberPoints, pointGroup)}</span>
-        {deletable && (
-          <button
-            onClick={handleRemove}
-            disabled={removing}
-            className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50 transition"
-          >
-            {removing ? "..." : "削除"}
-          </button>
-        )}
-      </div>
-    </li>
-  );
-}
-
-function InviteForm({ groupId, availableRoles }: { groupId: string; availableRoles: ("LEADER" | "MEMBER")[] }) {
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"LEADER" | "MEMBER">(availableRoles[0]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/groups/${groupId}/invitations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, role }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "エラーが発生しました");
-        return;
-      }
-      setSuccess(`${data.invitee.name ?? data.invitee.email} に招待を送りました`);
-      setEmail("");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5">
-      <p className="text-sm font-medium text-gray-700 mb-3">メンバーを招待</p>
-      <form onSubmit={handleSubmit} className="flex gap-3">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="メールアドレス"
-          className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          required
-        />
-        {availableRoles.length > 1 && (
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as "LEADER" | "MEMBER")}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            <option value="LEADER">管理側</option>
-            <option value="MEMBER">一般</option>
-          </select>
-        )}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+        {/* メンバー管理ページへのリンク */}
+        <Link
+          href={`/groups/${id}/members`}
+          className="block bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition"
         >
-          {submitting ? "送信中..." : "招待を送る"}
-        </button>
-      </form>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-      {success && <p className="mt-2 text-sm text-green-600">{success}</p>}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-gray-800">メンバー</p>
+              <p className="text-xs text-gray-400 mt-0.5">メンバー一覧・招待・管理</p>
+            </div>
+            <span className="text-gray-400">→</span>
+          </div>
+        </Link>
+      </main>
     </div>
   );
 }
