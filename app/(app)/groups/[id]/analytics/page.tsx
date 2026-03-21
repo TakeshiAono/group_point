@@ -275,7 +275,7 @@ export default function GroupAnalyticsPage() {
         selectedBucket={topBucket}
         onBucketChange={setTopBucket}
         granularity={topGranularity}
-        onGranularityChange={(g) => { setTopGranularity(g); setTopBucket("current"); }}
+        onGranularityChange={(g) => setTopGranularity(g)}
         pieData={topPieData}
         formatPieValue={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
         lineRows={topLineRows}
@@ -303,7 +303,7 @@ export default function GroupAnalyticsPage() {
         selectedBucket={bottomBucket}
         onBucketChange={setBottomBucket}
         granularity={bottomGranularity}
-        onGranularityChange={(g) => { setBottomGranularity(g); setBottomBucket("current"); }}
+        onGranularityChange={(g) => setBottomGranularity(g)}
         pieData={completionPieData}
         formatPieValue={(v) => `${v} 件`}
         lineRows={completionLineRows}
