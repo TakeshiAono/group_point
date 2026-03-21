@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { addQuestLog } from "@/lib/questLog";
 
 // クエスト一覧取得
 export async function GET(
@@ -91,6 +92,8 @@ export async function POST(
       },
     });
 
+    await addQuestLog({ questId: quest.id, memberId: creatorMember.id, action: "CREATED", detail: `クエスト「${quest.title}」が作成されました（${quest.pointReward} pt）` });
+
     return NextResponse.json(quest, { status: 201 });
   }
 
@@ -115,6 +118,8 @@ export async function POST(
       data: { memberPoints: { decrement: pointReward } },
     }),
   ]);
+
+  await addQuestLog({ questId: quest.id, memberId: creatorMember.id, action: "CREATED", detail: `クエスト「${quest.title}」が作成されました（${quest.pointReward} pt）` });
 
   return NextResponse.json(quest, { status: 201 });
 }
