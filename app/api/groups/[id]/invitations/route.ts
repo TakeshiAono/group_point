@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { sendInvitationEmail } from "@/lib/emails/invitation";
 
 // グループへの招待を送る（LEADERのみ）
 export async function POST(
@@ -44,6 +45,12 @@ export async function POST(
     return NextResponse.json({ error: "このユーザーはすでにグループのメンバーです" }, { status: 409 });
   }
 
+  // 招待者情報を取得
+  const inviter = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { name: true },
+  });
+
   // 既存の招待があれば再送（ステータスをPENDINGに戻す）
   const invitation = await prisma.invitation.upsert({
     where: { groupId_inviteeId: { groupId, inviteeId: invitee.id } },
@@ -59,6 +66,17 @@ export async function POST(
       invitee: { select: { id: true, name: true, email: true } },
     },
   });
+
+  // メール送信（失敗してもAPIレスポンスには影響させない）
+  const appUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  sendInvitationEmail({
+    to: invitee.email,
+    inviteeName: invitee.name,
+    groupName: invitation.group.name,
+    inviterName: inviter?.name ?? null,
+    role,
+    appUrl,
+  }).catch((err) => console.error("[mailer] 招待メール送信失敗:", err));
 
   return NextResponse.json(invitation, { status: 201 });
 }
