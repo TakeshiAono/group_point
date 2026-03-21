@@ -446,7 +446,7 @@ function IssuedPointsEditor({
         {isAdmin && (
           <button
             onClick={() => setSettingsOpen((v) => !v)}
-            className="text-xs text-gray-400 hover:text-gray-600 transition"
+            className="text-sm px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
             表示設定
           </button>
