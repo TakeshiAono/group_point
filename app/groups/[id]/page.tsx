@@ -155,6 +155,27 @@ export default function GroupDetailPage() {
           onRemoved={removeMember}
           inviteRole={myRole === "ADMIN" || myRole === "LEADER" ? "MEMBER" : undefined}
         />
+
+        {/* ポイント付与（ADMINのみ） */}
+        {myRole === "ADMIN" && (
+          <GrantPointsSection
+            groupId={id}
+            members={group.members}
+            onGranted={(memberId, amount) => {
+              setGroup((prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  members: prev.members.map((m) =>
+                    memberId === null || m.id === memberId
+                      ? { ...m, memberPoints: m.memberPoints + amount }
+                      : m
+                  ),
+                };
+              });
+            }}
+          />
+        )}
       </main>
     </div>
   );
@@ -383,6 +404,124 @@ function IssuedPointsEditor({
           />
         </div>
       )}
+    </section>
+  );
+}
+
+function GrantPointsSection({
+  groupId,
+  members,
+  onGranted,
+}: {
+  groupId: string;
+  members: Member[];
+  onGranted: (memberId: string | null, amount: number) => void;
+}) {
+  const [mode, setMode] = useState<"individual" | "all">("individual");
+  const [selectedMemberId, setSelectedMemberId] = useState(members[0]?.id ?? "");
+  const [amount, setAmount] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (amount <= 0) return;
+    setSubmitting(true);
+    try {
+      const body: { amount: number; memberId?: string } = { amount };
+      if (mode === "individual") body.memberId = selectedMemberId;
+      const res = await fetch(`/api/groups/${groupId}/grant`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "エラーが発生しました");
+        return;
+      }
+      if (mode === "individual") {
+        onGranted(selectedMemberId, amount);
+        setSuccess(`${amount} pt を付与しました`);
+      } else {
+        onGranted(null, amount);
+        setSuccess(`全員に ${amount} pt を付与しました（合計 ${data.totalGranted} pt）`);
+      }
+      setAmount(0);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
+      <h3 className="font-semibold text-gray-800">ポイント付与（ADMIN）</h3>
+
+      <div className="flex gap-4">
+        <label className="flex items-center gap-2 cursor-pointer text-sm">
+          <input
+            type="radio"
+            checked={mode === "individual"}
+            onChange={() => setMode("individual")}
+          />
+          個人に付与
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer text-sm">
+          <input
+            type="radio"
+            checked={mode === "all"}
+            onChange={() => setMode("all")}
+          />
+          全員に付与
+        </label>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-wrap gap-3 items-end">
+        {mode === "individual" && (
+          <div>
+            <p className="text-xs text-gray-500 mb-1">対象メンバー</p>
+            <select
+              value={selectedMemberId}
+              onChange={(e) => setSelectedMemberId(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.user.name ?? m.user.email}（{m.memberPoints} pt）
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div>
+          <p className="text-xs text-gray-500 mb-1">付与量</p>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              value={amount || ""}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              placeholder="pt"
+              className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              required
+            />
+            <span className="text-sm text-gray-500">pt</span>
+          </div>
+        </div>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="px-5 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
+        >
+          {submitting ? "付与中..." : "付与する"}
+        </button>
+      </form>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      {success && <p className="text-sm text-green-600">{success}</p>}
     </section>
   );
 }
