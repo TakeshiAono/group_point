@@ -534,7 +534,7 @@ function IssuedPointsEditor({
   onUpdated: (v: number) => void;
   onSettingsUpdated: (s: Partial<Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">>) => void;
 }) {
-  const reclaimable = totalIssuedPoints;
+  const reclaimable = totalIssuedPoints - totalCirculating;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pointUnit, setPointUnit] = useState(group.pointUnit);
   const [laborCost, setLaborCost] = useState(group.laborCostPerHour);

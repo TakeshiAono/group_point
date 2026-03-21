@@ -150,12 +150,6 @@ export async function POST(_req: Request, { params }: Params) {
         where: { id: quest.creatorId },
         data: { memberPoints: { decrement: totalPayout } },
       });
-    } else if (quest.questType === "GOVERNMENT") {
-      // 政府案件: 実際の支払額をグループの発行済みポイントから差し引く
-      await tx.group.update({
-        where: { id: groupId },
-        data: { totalIssuedPoints: { decrement: totalPayout } },
-      });
     }
   });
 
