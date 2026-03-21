@@ -18,8 +18,22 @@ type Group = {
   id: string;
   name: string;
   totalIssuedPoints?: number; // ADMIN/LEADERのみ返される
+  pointUnit: string;
+  laborCostPerHour: number;
+  timeUnit: string;
   members: Member[];
 };
+
+// ポイントを表示用にフォーマット
+function formatPoint(points: number, group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">): string {
+  if (group.pointUnit === "円" && group.laborCostPerHour > 0) {
+    const hoursMap: Record<string, number> = { HOUR: 1, WEEK: 40, MONTH: 160 };
+    const hours = hoursMap[group.timeUnit] ?? 1;
+    const yen = points * hours * group.laborCostPerHour;
+    return `${yen.toLocaleString("ja-JP")} 円`;
+  }
+  return `${points} pt`;
+}
 
 type Quest = {
   id: string;
@@ -170,7 +184,7 @@ export default function GroupDetailPage() {
             <h3 className="font-semibold text-gray-800">自分の情報</h3>
             <div className="flex items-center gap-3">
               <span className="text-sm text-gray-500">保有ポイント</span>
-              <span className="text-3xl font-bold text-blue-600">{myMember.memberPoints} pt</span>
+              <span className="text-3xl font-bold text-blue-600">{formatPoint(myMember.memberPoints, group)}</span>
             </div>
 
             <div className="border-t border-gray-100 pt-4">
@@ -196,7 +210,7 @@ export default function GroupDetailPage() {
                             </span>
                           </div>
                           <p className="text-sm text-gray-800 truncate">{q.title}</p>
-                          <p className="text-xs font-bold text-blue-600 mt-0.5">{q.pointReward} pt</p>
+                          <p className="text-xs font-bold text-blue-600 mt-0.5">{formatPoint(q.pointReward, group)}</p>
                         </Link>
                       ))
                     )}
@@ -222,7 +236,7 @@ export default function GroupDetailPage() {
                           <p className="text-sm text-gray-800 truncate">{sq.title}</p>
                           <p className="text-xs text-gray-400 truncate">{sq.quest.title}</p>
                           {sq.pointReward > 0 && (
-                            <p className="text-xs font-bold text-blue-600 mt-0.5">{sq.pointReward} pt</p>
+                            <p className="text-xs font-bold text-blue-600 mt-0.5">{formatPoint(sq.pointReward, group)}</p>
                           )}
                         </Link>
                       ))
@@ -263,7 +277,9 @@ export default function GroupDetailPage() {
             totalIssuedPoints={group.totalIssuedPoints}
             totalCirculating={totalCirculating}
             isAdmin={myRole === "ADMIN"}
+            group={group}
             onUpdated={(v) => setGroup((prev) => prev ? { ...prev, totalIssuedPoints: v } : prev)}
+            onSettingsUpdated={(settings) => setGroup((prev) => prev ? { ...prev, ...settings } : prev)}
           />
         )}
 
@@ -279,6 +295,7 @@ export default function GroupDetailPage() {
           onRemoved={removeMember}
           inviteLeaderRole={myRole === "ADMIN" ? "LEADER" : undefined}
           inviteMemberRole={myRole === "ADMIN" || myRole === "LEADER" ? "MEMBER" : undefined}
+          pointGroup={group}
         />
 
         {/* ポイント付与（ADMINのみ） */}
@@ -314,6 +331,7 @@ function MemberSection({
   onRemoved,
   inviteLeaderRole,
   inviteMemberRole,
+  pointGroup,
 }: {
   title: string;
   members: Member[];
@@ -322,6 +340,7 @@ function MemberSection({
   onRemoved: (id: string) => void;
   inviteLeaderRole?: "LEADER";
   inviteMemberRole?: "MEMBER";
+  pointGroup: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
 }) {
   return (
     <section className="space-y-3">
@@ -338,6 +357,7 @@ function MemberSection({
               groupId={groupId}
               deletable={canDelete(m)}
               onRemoved={onRemoved}
+              pointGroup={pointGroup}
             />
           ))}
         </ul>
@@ -353,11 +373,13 @@ function MemberRow({
   groupId,
   deletable,
   onRemoved,
+  pointGroup,
 }: {
   member: Member;
   groupId: string;
   deletable: boolean;
   onRemoved: (id: string) => void;
+  pointGroup: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
 }) {
   const [removing, setRemoving] = useState(false);
 
@@ -388,7 +410,7 @@ function MemberRow({
         )}
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-600">{member.memberPoints} pt</span>
+        <span className="text-sm text-gray-600">{formatPoint(member.memberPoints, pointGroup)}</span>
         {deletable && (
           <button
             onClick={handleRemove}
@@ -465,15 +487,25 @@ function IssuedPointsEditor({
   totalIssuedPoints,
   totalCirculating,
   isAdmin,
+  group,
   onUpdated,
+  onSettingsUpdated,
 }: {
   groupId: string;
   totalIssuedPoints: number;
   totalCirculating: number;
   isAdmin: boolean;
+  group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
   onUpdated: (v: number) => void;
+  onSettingsUpdated: (s: Partial<Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">>) => void;
 }) {
   const reclaimable = totalIssuedPoints - totalCirculating;
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pointUnit, setPointUnit] = useState(group.pointUnit);
+  const [laborCost, setLaborCost] = useState(group.laborCostPerHour);
+  const [timeUnit, setTimeUnit] = useState(group.timeUnit);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
 
   async function sendDelta(delta: number, amount: number, setError: (e: string) => void, setSaving: (b: boolean) => void, setAmount: (v: number) => void) {
     setError("");
@@ -496,9 +528,107 @@ function IssuedPointsEditor({
     }
   }
 
+  async function saveSettings(e: React.FormEvent) {
+    e.preventDefault();
+    setSettingsError("");
+    setSettingsSaving(true);
+    try {
+      const res = await fetch(`/api/groups/${groupId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pointUnit, laborCostPerHour: laborCost, timeUnit }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setSettingsError(data.error ?? "エラーが発生しました"); return; }
+      onSettingsUpdated({ pointUnit: data.pointUnit, laborCostPerHour: data.laborCostPerHour, timeUnit: data.timeUnit });
+      setSettingsOpen(false);
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
+  const TIME_UNIT_LABEL: Record<string, string> = { HOUR: "時間・人", WEEK: "週・人", MONTH: "月・人" };
+
   return (
     <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
-      <h3 className="font-semibold text-gray-800">政府発行済みポイント</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-gray-800">政府発行済みポイント</h3>
+        {isAdmin && (
+          <button
+            onClick={() => setSettingsOpen((v) => !v)}
+            className="text-xs text-gray-400 hover:text-gray-600 transition"
+          >
+            表示設定
+          </button>
+        )}
+      </div>
+
+      {/* 表示設定パネル */}
+      {settingsOpen && (
+        <form onSubmit={saveSettings} className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+          <p className="text-xs font-medium text-gray-600">表示・人件費設定</p>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">表示単位</p>
+              <div className="flex gap-2">
+                {(["pt", "円"] as const).map((u) => (
+                  <label key={u} className="flex items-center gap-1.5 cursor-pointer text-sm">
+                    <input type="radio" checked={pointUnit === u} onChange={() => setPointUnit(u)} />
+                    {u}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">時間単位（1pt =）</p>
+              <select
+                value={timeUnit}
+                onChange={(e) => setTimeUnit(e.target.value)}
+                className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                {Object.entries(TIME_UNIT_LABEL).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">人件費（円/時間）</p>
+              <input
+                type="number"
+                min={0}
+                value={laborCost || ""}
+                onChange={(e) => setLaborCost(Number(e.target.value))}
+                placeholder="例: 3000"
+                className="w-32 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={settingsSaving}
+                className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                {settingsSaving ? "保存中..." : "保存"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(false)}
+                className="px-3 py-1.5 text-xs text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+          {pointUnit === "円" && (
+            <p className="text-xs text-gray-400">
+              1pt = 1{TIME_UNIT_LABEL[timeUnit]} × {laborCost.toLocaleString()} 円/時間
+              {timeUnit === "WEEK" ? " × 40時間" : timeUnit === "MONTH" ? " × 160時間" : ""}
+              {" = "}{formatPoint(1, { pointUnit: "円", laborCostPerHour: laborCost, timeUnit })}
+            </p>
+          )}
+          {settingsError && <p className="text-xs text-red-600">{settingsError}</p>}
+        </form>
+      )}
 
       {/* 現在の状態 */}
       <div className="flex flex-col sm:flex-row gap-6 items-center">
@@ -532,15 +662,15 @@ function IssuedPointsEditor({
         <div className="flex flex-wrap gap-6 text-sm">
           <div>
             <p className="text-gray-400 text-xs mb-0.5">発行済み</p>
-            <p className="text-2xl font-bold text-gray-800">{totalIssuedPoints} pt</p>
+            <p className="text-2xl font-bold text-gray-800">{formatPoint(totalIssuedPoints, group)}</p>
           </div>
           <div>
             <p className="text-gray-400 text-xs mb-0.5">流通中</p>
-            <p className="text-2xl font-bold text-blue-600">{totalCirculating} pt</p>
+            <p className="text-2xl font-bold text-blue-600">{formatPoint(totalCirculating, group)}</p>
           </div>
           <div>
             <p className="text-gray-400 text-xs mb-0.5">未流通（回収可能）</p>
-            <p className="text-2xl font-bold text-green-600">{Math.max(reclaimable, 0)} pt</p>
+            <p className="text-2xl font-bold text-green-600">{formatPoint(Math.max(reclaimable, 0), group)}</p>
           </div>
         </div>
       </div>

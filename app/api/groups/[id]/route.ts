@@ -15,7 +15,39 @@ export async function PATCH(
   }
 
   const { id: groupId } = await params;
-  const { delta } = await req.json();
+  const body = await req.json();
+  const { delta, pointUnit, laborCostPerHour, timeUnit } = body;
+
+  // グループ表示設定の更新（ADMINのみ）
+  if (pointUnit !== undefined || laborCostPerHour !== undefined || timeUnit !== undefined) {
+    const operator = await prisma.groupMember.findUnique({
+      where: { userId_groupId: { userId: session.user.id, groupId } },
+    });
+    if (!operator || operator.role !== "ADMIN") {
+      return NextResponse.json({ error: "設定変更はADMINのみ実行できます" }, { status: 403 });
+    }
+    const data: Record<string, unknown> = {};
+    if (pointUnit !== undefined) {
+      if (pointUnit !== "pt" && pointUnit !== "円") {
+        return NextResponse.json({ error: "pointUnitはptまたは円を指定してください" }, { status: 400 });
+      }
+      data.pointUnit = pointUnit;
+    }
+    if (laborCostPerHour !== undefined) {
+      if (typeof laborCostPerHour !== "number" || !Number.isInteger(laborCostPerHour) || laborCostPerHour < 0) {
+        return NextResponse.json({ error: "人件費は0以上の整数で指定してください" }, { status: 400 });
+      }
+      data.laborCostPerHour = laborCostPerHour;
+    }
+    if (timeUnit !== undefined) {
+      if (!["HOUR", "WEEK", "MONTH"].includes(timeUnit)) {
+        return NextResponse.json({ error: "timeUnitはHOUR/WEEK/MONTHを指定してください" }, { status: 400 });
+      }
+      data.timeUnit = timeUnit;
+    }
+    const updated = await prisma.group.update({ where: { id: groupId }, data });
+    return NextResponse.json(updated);
+  }
 
   if (typeof delta !== "number" || !Number.isInteger(delta) || delta === 0) {
     return NextResponse.json({ error: "deltaは0以外の整数で指定してください" }, { status: 400 });
