@@ -212,7 +212,7 @@ export default function GroupDetailPage() {
             )}
             <Link
               href={`/groups/${id}/analytics`}
-              className="ml-auto text-xs px-3 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition"
+              className="ml-auto text-sm px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
               分析
             </Link>
