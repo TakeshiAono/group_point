@@ -29,6 +29,33 @@ const TIME_UNIT_LABEL: Record<string, string> = { YEN: "円", HOUR: "人・時�
 // 人・時間 = pt ÷ 人件費、人・日 = 人・時間 ÷ 8、人・週 = 人・日 ÷ 5、人・月 = 人・週 ÷ 4
 const TIME_UNIT_MULTIPLIER: Record<string, number> = { HOUR: 1, DAY: 1 / 8, WEEK: 1 / (8 * 5), MONTH: 1 / (8 * 5 * 4) };
 
+// 入力値（設定単位）→ pt に変換
+function unitToPt(value: number, group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">): number {
+  if (group.pointUnit !== "円" || group.timeUnit === "YEN" || !group.laborCostPerHour) {
+    return Math.round(value);
+  }
+  // displayValue = (pt / laborCostPerHour) * TIME_UNIT_MULTIPLIER[timeUnit]
+  // pt = displayValue / TIME_UNIT_MULTIPLIER[timeUnit] * laborCostPerHour
+  const multiplier = TIME_UNIT_MULTIPLIER[group.timeUnit] ?? 1;
+  return Math.round((value / multiplier) * group.laborCostPerHour);
+}
+
+// pt → 設定単位の値に変換
+function ptToUnit(pt: number, group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">): number {
+  if (group.pointUnit !== "円" || group.timeUnit === "YEN" || !group.laborCostPerHour) {
+    return pt;
+  }
+  const multiplier = TIME_UNIT_MULTIPLIER[group.timeUnit] ?? 1;
+  return (pt / group.laborCostPerHour) * multiplier;
+}
+
+// 入力フォームに表示するラベル
+function inputUnitLabel(group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">): string {
+  if (group.pointUnit !== "円") return "pt";
+  if (group.timeUnit === "YEN" || !group.laborCostPerHour) return "円";
+  return TIME_UNIT_LABEL[group.timeUnit] ?? "円";
+}
+
 // ポイントを表示用にフォーマット
 function formatPoint(points: number, group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">): string {
   if (group.pointUnit === "円") {
@@ -310,6 +337,7 @@ export default function GroupDetailPage() {
           <GrantPointsSection
             groupId={id}
             members={group.members}
+            group={group}
             onGranted={(memberId, amount) => {
               setGroup((prev) => {
                 if (!prev) return prev;
@@ -688,18 +716,18 @@ function IssuedPointsEditor({
             label="追加発行"
             buttonLabel="発行する"
             buttonClass="bg-blue-600 hover:bg-blue-700"
-            min={1}
             sign={1}
             onSubmit={sendDelta}
+            group={group}
           />
           <DeltaForm
-            label={`回収（最大 ${reclaimable} pt）`}
+            label={`回収（最大 ${formatPoint(Math.max(reclaimable, 0), group)}）`}
             buttonLabel="回収する"
             buttonClass="bg-red-500 hover:bg-red-600"
-            min={1}
-            max={reclaimable}
+            maxPt={reclaimable}
             sign={-1}
             onSubmit={sendDelta}
+            group={group}
           />
         </div>
       )}
@@ -711,10 +739,12 @@ function GrantPointsSection({
   groupId,
   members,
   onGranted,
+  group,
 }: {
   groupId: string;
   members: Member[];
   onGranted: (memberId: string | null, amount: number) => void;
+  group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
 }) {
   const [mode, setMode] = useState<"individual" | "all">("individual");
   const [selectedMemberId, setSelectedMemberId] = useState(members[0]?.id ?? "");
@@ -723,14 +753,19 @@ function GrantPointsSection({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const unitLabel = inputUnitLabel(group);
+  const isDecimalUnit = group.pointUnit === "円" && group.timeUnit !== "YEN" && group.laborCostPerHour > 0;
+  const step = isDecimalUnit ? 0.01 : 1;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setSuccess("");
     if (amount <= 0) return;
+    const ptAmount = unitToPt(amount, group);
     setSubmitting(true);
     try {
-      const body: { amount: number; memberId?: string } = { amount };
+      const body: { amount: number; memberId?: string } = { amount: ptAmount };
       if (mode === "individual") body.memberId = selectedMemberId;
       const res = await fetch(`/api/groups/${groupId}/grant`, {
         method: "POST",
@@ -743,11 +778,11 @@ function GrantPointsSection({
         return;
       }
       if (mode === "individual") {
-        onGranted(selectedMemberId, amount);
-        setSuccess(`${amount} pt を付与しました`);
+        onGranted(selectedMemberId, ptAmount);
+        setSuccess(`${amount} ${unitLabel} を付与しました`);
       } else {
-        onGranted(null, amount);
-        setSuccess(`全員に ${amount} pt を付与しました（合計 ${data.totalGranted} pt）`);
+        onGranted(null, ptAmount);
+        setSuccess(`全員に ${amount} ${unitLabel} を付与しました（合計 ${data.totalGranted} pt）`);
       }
       setAmount(0);
     } finally {
@@ -789,7 +824,7 @@ function GrantPointsSection({
             >
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.user.name ?? m.user.email}（{m.memberPoints} pt）
+                  {m.user.name ?? m.user.email}（{formatPoint(m.memberPoints, group)}）
                 </option>
               ))}
             </select>
@@ -800,14 +835,15 @@ function GrantPointsSection({
           <div className="flex items-center gap-2">
             <input
               type="number"
-              min={1}
+              min={step}
+              step={step}
               value={amount || ""}
               onChange={(e) => setAmount(Number(e.target.value))}
-              placeholder="pt"
+              placeholder={unitLabel}
               className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               required
             />
-            <span className="text-sm text-gray-500">pt</span>
+            <span className="text-sm text-gray-500">{unitLabel}</span>
           </div>
         </div>
         <button
@@ -829,46 +865,54 @@ function DeltaForm({
   label,
   buttonLabel,
   buttonClass,
-  min,
-  max,
+  maxPt,
   sign,
   onSubmit,
+  group,
 }: {
   label: string;
   buttonLabel: string;
   buttonClass: string;
-  min: number;
-  max?: number;
+  maxPt?: number;
   sign: 1 | -1;
   onSubmit: (delta: number, amount: number, setError: (e: string) => void, setSaving: (b: boolean) => void, setAmount: (v: number) => void) => void;
+  group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
 }) {
   const [amount, setAmount] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const unitLabel = inputUnitLabel(group);
+  const isDecimalUnit = group.pointUnit === "円" && group.timeUnit !== "YEN" && group.laborCostPerHour > 0;
+  const step = isDecimalUnit ? 0.01 : 1;
+  const displayMax = maxPt !== undefined ? ptToUnit(maxPt, group) : undefined;
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (amount <= 0) return;
-    onSubmit(sign * amount, amount, setError, setSaving, setAmount);
+    const ptAmount = unitToPt(amount, group);
+    onSubmit(sign * ptAmount, ptAmount, setError, setSaving, setAmount);
   }
 
   return (
     <div>
       <p className="text-sm font-medium text-gray-700 mb-2">{label}</p>
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex gap-2 items-center">
         <input
           type="number"
-          min={min}
-          max={max}
+          min={step}
+          max={displayMax}
+          step={step}
           value={amount || ""}
           onChange={(e) => setAmount(Number(e.target.value))}
-          placeholder="pt"
+          placeholder={unitLabel}
           className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           required
         />
+        <span className="text-sm text-gray-500">{unitLabel}</span>
         <button
           type="submit"
-          disabled={saving || (max !== undefined && max <= 0)}
+          disabled={saving || (maxPt !== undefined && maxPt <= 0)}
           className={`px-4 py-2 text-white text-sm rounded-lg disabled:opacity-50 transition ${buttonClass}`}
         >
           {saving ? "..." : buttonLabel}
