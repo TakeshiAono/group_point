@@ -80,16 +80,7 @@ export default function GroupDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-800">Group Point</h1>
-          <Link href="/groups" className="text-sm text-gray-500 hover:text-gray-700">
-            ← グループ一覧
-          </Link>
-        </div>
-      </header>
-
+    <div>
       <main className="max-w-4xl mx-auto px-6 py-10 space-y-8">
         <section>
           <div className="flex items-center gap-3">
@@ -390,7 +381,7 @@ function IssuedPointsEditor({
                 <Cell fill="#3b82f6" />
                 <Cell fill="#22c55e" />
               </Pie>
-              <Tooltip formatter={(value: number) => `${value} pt`} />
+              <Tooltip formatter={(value) => [`${value} pt`]} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
