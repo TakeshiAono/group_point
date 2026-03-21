@@ -18,6 +18,7 @@ type Quest = {
   status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   creator: QuestMember;
   completer: QuestMember | null;
+  deadline: string | null;
   createdAt: string;
 };
 
@@ -133,7 +134,7 @@ export default function QuestsPage() {
           <p className="text-gray-400 text-sm py-8 text-center">クエストがありません</p>
         ) : (
           <ul className="space-y-3">
-            {filtered.map((q) => <QuestCard key={q.id} quest={q} />)}
+            {filtered.map((q) => <QuestCard key={q.id} quest={q} groupId={groupId} />)}
           </ul>
         )}
       </main>
@@ -141,28 +142,39 @@ export default function QuestsPage() {
   );
 }
 
-function QuestCard({ quest }: { quest: Quest }) {
+function QuestCard({ quest, groupId }: { quest: Quest; groupId: string }) {
+  const isOverdue = quest.deadline && quest.status !== "COMPLETED" && quest.status !== "CANCELLED"
+    && new Date(quest.deadline) < new Date();
+
   return (
-    <li className="bg-white border border-gray-200 rounded-xl px-6 py-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[quest.status]}`}>
-              {STATUS_LABEL[quest.status]}
-            </span>
-            <span className="text-xs text-gray-400">
-              by {quest.creator.user.name ?? quest.creator.user.email}
-            </span>
+    <li className="bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition">
+      <Link href={`/groups/${groupId}/quests/${quest.id}`} className="block">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[quest.status]}`}>
+                {STATUS_LABEL[quest.status]}
+              </span>
+              <span className="text-xs text-gray-400">
+                by {quest.creator.user.name ?? quest.creator.user.email}
+              </span>
+            </div>
+            <p className="font-medium text-gray-800">{quest.title}</p>
+            {quest.description && (
+              <p className="text-sm text-gray-500 mt-1">{quest.description}</p>
+            )}
+            {quest.deadline && (
+              <p className={`text-xs mt-1 ${isOverdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
+                期限: {new Date(quest.deadline).toLocaleDateString("ja-JP")}
+                {isOverdue && "（期限超過）"}
+              </p>
+            )}
           </div>
-          <p className="font-medium text-gray-800">{quest.title}</p>
-          {quest.description && (
-            <p className="text-sm text-gray-500 mt-1">{quest.description}</p>
-          )}
+          <div className="text-right shrink-0">
+            <p className="text-lg font-bold text-blue-600">{quest.pointReward} pt</p>
+          </div>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-lg font-bold text-blue-600">{quest.pointReward} pt</p>
-        </div>
-      </div>
+      </Link>
     </li>
   );
 }
@@ -186,6 +198,7 @@ function CreateQuestForm({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pointReward, setPointReward] = useState(0);
+  const [deadline, setDeadline] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -197,7 +210,7 @@ function CreateQuestForm({
       const res = await fetch(`/api/groups/${groupId}/quests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, pointReward, questType }),
+        body: JSON.stringify({ title, description, pointReward, questType, deadline: deadline || undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -272,6 +285,15 @@ function CreateQuestForm({
             required
           />
           <span className="text-sm text-gray-500">pt</span>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">デッドライン（任意）</label>
+          <input
+            type="date"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex gap-3">
