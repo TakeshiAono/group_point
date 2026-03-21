@@ -24,10 +24,11 @@ export default function GroupsPage() {
 
   useEffect(() => {
     fetch("/api/groups")
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : Promise.reject(r.status))
       .then((data) => {
         if (Array.isArray(data)) setGroups(data);
-      });
+      })
+      .catch((e) => console.error("グループ一覧の取得に失敗しました", e));
   }, []);
 
   async function handleCreate(e: React.FormEvent) {

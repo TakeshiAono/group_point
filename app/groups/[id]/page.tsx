@@ -38,15 +38,19 @@ export default function GroupDetailPage() {
   const [myUserId, setMyUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/me").then((r) => r.json()).then((d) => { if (d.id) setMyUserId(d.id); });
+    fetch("/api/me")
+      .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+      .then((d) => { if (d.id) setMyUserId(d.id); })
+      .catch((e) => console.error("ユーザー情報の取得に失敗しました", e));
     fetch("/api/groups")
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : Promise.reject(r.status))
       .then((data: unknown) => {
         if (Array.isArray(data)) {
           const found = data.find((g: Group) => g.id === id);
           setGroup(found ?? null);
         }
-      });
+      })
+      .catch((e) => console.error("グループ情報の取得に失敗しました", e));
   }, [id]);
 
   if (!group) return <div className="p-10 text-gray-500">読み込み中...</div>;
