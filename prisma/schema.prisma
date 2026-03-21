@@ -11,16 +11,90 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String        @unique
   emailVerified DateTime?
   password      String?
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   accounts      Account[]
   sessions      Session[]
+  groupMembers  GroupMember[]
+}
+
+// ─── グループ ───────────────────────────────────────────────
+
+/// グループ（コミュニティ）。リーダー（政府）が政府ポイントを発行・依頼を作成できる。
+model Group {
+  id                String        @id @default(cuid())
+  name              String
+  /// 政府がこれまでに発行した累計ポイント数
+  totalIssuedPoints Int           @default(0)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  members           GroupMember[]
+  quests            Quest[]
+}
+
+/// グループとユーザーの中間テーブル。ロールとメンバーポイント残高を保持。
+model GroupMember {
+  id           String      @id @default(cuid())
+  userId       String
+  groupId      String
+  role         GroupRole   @default(MEMBER)
+  /// メンバーが保有するポイント残高（政府依頼達成・メンバー依頼受取で増減）
+  memberPoints Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group        Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdQuests  Quest[]   @relation("QuestCreator")
+  completedQuests Quest[]  @relation("QuestCompleter")
+
+  @@unique([userId, groupId])
+}
+
+enum GroupRole {
+  LEADER  // 政府（グループ長）
+  MEMBER  // 一般メンバー
+}
+
+// ─── 依頼（クエスト）────────────────────────────────────────
+
+/// 依頼。政府発行とメンバー発行の2種類がある。
+model Quest {
+  id          String       @id @default(cuid())
+  groupId     String
+  /// 依頼作成者（GroupMember.id）
+  creatorId   String
+  title       String
+  description String?
+  /// 報酬ポイント数
+  pointReward Int
+  /// GOVERNMENT: 政府発行（政府ポイントを新規付与）/ MEMBER: メンバー発行（作成者のポイントを報酬として使用）
+  questType   QuestType
+  status      QuestStatus  @default(OPEN)
+  /// 依頼完了者（GroupMember.id）
+  completerId String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  group       Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator     GroupMember  @relation("QuestCreator", fields: [creatorId], references: [id])
+  completer   GroupMember? @relation("QuestCompleter", fields: [completerId], references: [id])
+}
+
+enum QuestType {
+  GOVERNMENT  // 政府発行の依頼：達成すると政府ポイントが付与される
+  MEMBER      // メンバー発行の依頼：作成者のメンバーポイントが報酬となる
+}
+
+enum QuestStatus {
+  OPEN        // 受付中
+  IN_PROGRESS // 進行中
+  COMPLETED   // 完了
+  CANCELLED   // キャンセル
 }
 
 model Account {
