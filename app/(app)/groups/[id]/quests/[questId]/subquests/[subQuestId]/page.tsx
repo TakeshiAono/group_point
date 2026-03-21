@@ -118,9 +118,10 @@ export default function SubQuestDetailPage() {
           body: JSON.stringify({ pendingPointReward: proposedReward }),
         }
       );
-      const data = await res.json();
+      let data: { error?: string } & Record<string, unknown> = {};
+      try { data = await res.json(); } catch { /* ignore parse error */ }
       if (!res.ok) { setProposeError(data.error ?? "変更提案に失敗しました"); return; }
-      setSubQuest(data);
+      setSubQuest(data as SubQuest);
       setProposing(false);
     } finally {
       setProposing2(false);
