@@ -133,7 +133,17 @@ export default function QuestsPage() {
           <p className="text-gray-400 text-sm py-8 text-center">クエストがありません</p>
         ) : (
           <ul className="space-y-3">
-            {filtered.map((q) => <QuestCard key={q.id} quest={q} />)}
+            {filtered.map((q) => (
+              <QuestCard
+                key={q.id}
+                quest={q}
+                myMember={myMember}
+                groupId={groupId}
+                onAccepted={(updated) =>
+                  setQuests((prev) => prev.map((p) => p.id === updated.id ? updated : p))
+                }
+              />
+            ))}
           </ul>
         )}
       </main>
@@ -141,9 +151,45 @@ export default function QuestsPage() {
   );
 }
 
-function QuestCard({ quest }: { quest: Quest }) {
+function QuestCard({
+  quest,
+  myMember,
+  groupId,
+  onAccepted,
+}: {
+  quest: Quest;
+  myMember: GroupMember | null;
+  groupId: string;
+  onAccepted: (updated: Quest) => void;
+}) {
+  const [accepting, setAccepting] = useState(false);
+  const [error, setError] = useState("");
+
+  const canAccept =
+    myMember &&
+    quest.status === "OPEN" &&
+    quest.creator.id !== myMember.id;
+
+  async function handleAccept() {
+    setError("");
+    setAccepting(true);
+    try {
+      const res = await fetch(`/api/groups/${groupId}/quests/${quest.id}/accept`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "エラーが発生しました");
+        return;
+      }
+      onAccepted(data);
+    } finally {
+      setAccepting(false);
+    }
+  }
+
   return (
-    <li className="bg-white border border-gray-200 rounded-xl px-6 py-4">
+    <li className="bg-white border border-gray-200 rounded-xl px-6 py-4 space-y-2">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
@@ -158,11 +204,26 @@ function QuestCard({ quest }: { quest: Quest }) {
           {quest.description && (
             <p className="text-sm text-gray-500 mt-1">{quest.description}</p>
           )}
+          {quest.completer && (
+            <p className="text-xs text-gray-400 mt-1">
+              受注者: {quest.completer.user.name ?? quest.completer.user.email}
+            </p>
+          )}
         </div>
-        <div className="text-right shrink-0">
+        <div className="text-right shrink-0 space-y-2">
           <p className="text-lg font-bold text-blue-600">{quest.pointReward} pt</p>
+          {canAccept && (
+            <button
+              onClick={handleAccept}
+              disabled={accepting}
+              className="block w-full px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+            >
+              {accepting ? "受注中..." : "受注する"}
+            </button>
+          )}
         </div>
       </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
     </li>
   );
 }
