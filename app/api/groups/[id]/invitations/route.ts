@@ -3,7 +3,9 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { sendInvitationEmail } from "@/lib/emails/invitation";
 
-// グループへの招待を送る（LEADERのみ）
+// グループへの招待を送る
+// ADMIN: LEADER・MEMBERを招待可能
+// LEADER: MEMBERのみ招待可能
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -23,12 +25,17 @@ export async function POST(
     return NextResponse.json({ error: "roleはLEADERまたはMEMBERを指定してください" }, { status: 400 });
   }
 
-  // 操作者がLEADERか確認
+  // 操作者のロールを確認（ADMIN or LEADER のみ招待可能）
   const inviterMember = await prisma.groupMember.findUnique({
     where: { userId_groupId: { userId: session.user.id, groupId } },
   });
-  if (!inviterMember || inviterMember.role !== "LEADER") {
-    return NextResponse.json({ error: "この操作はLEADERのみ実行できます" }, { status: 403 });
+  if (!inviterMember || inviterMember.role === "MEMBER") {
+    return NextResponse.json({ error: "招待できる権限がありません" }, { status: 403 });
+  }
+
+  // LEADERはMEMBERしか招待できない
+  if (inviterMember.role === "LEADER" && role === "LEADER") {
+    return NextResponse.json({ error: "政府関係者の招待はADMINのみ実行できます" }, { status: 403 });
   }
 
   // 招待対象ユーザーを検索

@@ -21,7 +21,7 @@ export async function GET() {
   return NextResponse.json(groups);
 }
 
-// グループ作成（作成者がLEADERになる）
+// グループ作成（作成者がADMINになる）
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       members: {
         create: {
           userId: session.user.id,
-          role: "LEADER",
+          role: "ADMIN",
         },
       },
     },
