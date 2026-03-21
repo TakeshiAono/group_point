@@ -68,16 +68,7 @@ export default function QuestsPage() {
   const filtered = quests.filter((q) => q.questType === tab);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-800">Group Point</h1>
-          <Link href={`/groups/${groupId}`} className="text-sm text-gray-500 hover:text-gray-700">
-            ← グループに戻る
-          </Link>
-        </div>
-      </header>
-
+    <div>
       <main className="max-w-4xl mx-auto px-6 py-10 space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-800">クエスト一覧</h2>
