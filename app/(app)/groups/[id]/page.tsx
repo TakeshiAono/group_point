@@ -304,6 +304,20 @@ export default function GroupDetailPage() {
           </div>
         </Link>
 
+        {/* 管理者へのクエスト提案へのリンク */}
+        <Link
+          href={`/groups/${id}/quest-proposals`}
+          className="block bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-gray-800">管理者へのクエスト提案</p>
+              <p className="text-xs text-gray-400 mt-0.5">メンバーからの提案一覧・審査承認</p>
+            </div>
+            <span className="text-gray-400">→</span>
+          </div>
+        </Link>
+
         {/* 政府発行済みポイント管理（ADMIN/LEADERのみ） */}
         {group.totalIssuedPoints !== undefined && (
           <IssuedPointsEditor

@@ -44,6 +44,7 @@ model Group {
   members           GroupMember[]
   quests            Quest[]
   invitations       Invitation[]
+  questProposals    QuestProposal[]
 }
 
 /// クエストの変更ログ
@@ -96,6 +97,7 @@ model GroupMember {
   subQuests       SubQuest[]
   sentInvitations Invitation[]
   questLogs       QuestLog[]
+  questProposals  QuestProposal[]
 
   @@unique([userId, groupId])
 }
@@ -176,6 +178,36 @@ enum QuestStatus {
   IN_PROGRESS // 進行中
   COMPLETED   // 完了
   CANCELLED   // キャンセル
+}
+
+// ─── クエスト提案 ─────────────────────────────────────────
+
+/// 一般メンバーが政府に提案する公共事業クエスト。ADMIN/LEADERが承認するとQuestとして発行される。
+model QuestProposal {
+  id           String               @id @default(cuid())
+  groupId      String
+  /// 提案者（GroupMember.id）
+  proposerId   String
+  title        String
+  description  String?
+  /// 希望報酬ポイント
+  pointReward  Int
+  deadline     DateTime?
+  status       QuestProposalStatus  @default(PENDING)
+  /// 却下理由（任意）
+  rejectReason String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  group        Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  proposer     GroupMember          @relation(fields: [proposerId], references: [id])
+
+  @@index([groupId])
+}
+
+enum QuestProposalStatus {
+  PENDING   // 審査中
+  APPROVED  // 承認済み（クエスト化済み）
+  REJECTED  // 却下
 }
 
 // ─── 招待 ────────────────────────────────────────────────────
