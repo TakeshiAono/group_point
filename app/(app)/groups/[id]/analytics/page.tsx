@@ -269,8 +269,8 @@ export default function GroupAnalyticsPage() {
         <div className="flex border-b border-gray-200">
           {([
             { key: "points",     label: "保有ポイント" },
-            { key: "proposals",  label: "提案数" },
             { key: "completion", label: "クエスト完了数" },
+            { key: "proposals",  label: "提案数" },
           ] as const).map(({ key, label }) => (
             <button
               key={key}
