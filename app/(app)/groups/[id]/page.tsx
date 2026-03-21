@@ -167,53 +167,67 @@ export default function GroupDetailPage() {
               <span className="text-3xl font-bold text-blue-600">{myMember.memberPoints} pt</span>
             </div>
 
-            <div className="border-t border-gray-100 pt-4 space-y-2">
+            <div className="border-t border-gray-100 pt-4">
               {displayedQuests.length === 0 && displayedSubQuests.length === 0 ? (
                 <p className="text-sm text-gray-400">進行中の案件・サブクエストはありません</p>
               ) : (
-                <ul className="space-y-1">
-                  {displayedQuests.map((q) => (
-                    <li key={`q-${q.id}`}>
-                      <Link
-                        href={`/groups/${id}/quests/${q.id}`}
-                        className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${QUEST_STATUS_COLOR[q.status]}`}>
-                            {QUEST_STATUS_LABEL[q.status]}
-                          </span>
-                          <span className="text-xs text-gray-400 shrink-0">案件</span>
-                          <span className="text-sm text-gray-800 truncate">{q.title}</span>
-                        </div>
-                        <span className="text-sm font-bold text-blue-600 shrink-0">{q.pointReward} pt</span>
-                      </Link>
-                    </li>
-                  ))}
-                  {displayedSubQuests.map((sq) => (
-                    <li key={`sq-${sq.id}`}>
-                      <Link
-                        href={`/groups/${id}/quests/${sq.quest.id}/subquests/${sq.id}`}
-                        className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${SUB_STATUS_COLOR[sq.status]}`}>
-                            {SUB_STATUS_LABEL[sq.status]}
-                          </span>
-                          <span className="text-xs text-gray-400 shrink-0">サブ</span>
-                          <span className="text-sm text-gray-800 truncate">{sq.title}</span>
-                        </div>
-                        {sq.pointReward > 0 && (
-                          <span className="text-sm font-bold text-blue-600 shrink-0">{sq.pointReward} pt</span>
-                        )}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* 左：受注中クエスト */}
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-gray-500 mb-2">受注中の案件</p>
+                    {displayedQuests.length === 0 ? (
+                      <p className="text-xs text-gray-300">なし</p>
+                    ) : (
+                      displayedQuests.map((q) => (
+                        <Link
+                          key={q.id}
+                          href={`/groups/${id}/quests/${q.id}`}
+                          className="block px-3 py-2 rounded-lg hover:bg-gray-50 transition"
+                        >
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${QUEST_STATUS_COLOR[q.status]}`}>
+                              {QUEST_STATUS_LABEL[q.status]}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-800 truncate">{q.title}</p>
+                          <p className="text-xs font-bold text-blue-600 mt-0.5">{q.pointReward} pt</p>
+                        </Link>
+                      ))
+                    )}
+                  </div>
+
+                  {/* 右：サブクエスト */}
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-gray-500 mb-2">サブクエスト</p>
+                    {displayedSubQuests.length === 0 ? (
+                      <p className="text-xs text-gray-300">なし</p>
+                    ) : (
+                      displayedSubQuests.map((sq) => (
+                        <Link
+                          key={sq.id}
+                          href={`/groups/${id}/quests/${sq.quest.id}/subquests/${sq.id}`}
+                          className="block px-3 py-2 rounded-lg hover:bg-gray-50 transition"
+                        >
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${SUB_STATUS_COLOR[sq.status]}`}>
+                              {SUB_STATUS_LABEL[sq.status]}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-800 truncate">{sq.title}</p>
+                          <p className="text-xs text-gray-400 truncate">{sq.quest.title}</p>
+                          {sq.pointReward > 0 && (
+                            <p className="text-xs font-bold text-blue-600 mt-0.5">{sq.pointReward} pt</p>
+                          )}
+                        </Link>
+                      ))
+                    )}
+                  </div>
+                </div>
               )}
               {totalMyItems > 5 && (
                 <Link
                   href={`/groups/${id}/quests`}
-                  className="block text-xs text-blue-500 hover:text-blue-700 text-right pt-1"
+                  className="block text-xs text-blue-500 hover:text-blue-700 text-right pt-2"
                 >
                   すべて見る →
                 </Link>
