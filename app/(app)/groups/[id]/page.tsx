@@ -26,8 +26,8 @@ type Group = {
 
 // timeUnit: YEN=円のまま表示、HOUR/DAY/WEEK/MONTH=人・時間換算
 const TIME_UNIT_LABEL: Record<string, string> = { YEN: "円", HOUR: "人・時間", DAY: "人・日", WEEK: "人・週", MONTH: "人・月" };
-// 人・時間 = pt ÷ 人件費、人・日 = 人・時間 × 8、人・週 = 人・日 × 5、人・月 = 人・週 × 4
-const TIME_UNIT_MULTIPLIER: Record<string, number> = { HOUR: 1, DAY: 8, WEEK: 8 * 5, MONTH: 8 * 5 * 4 };
+// 人・時間 = pt ÷ 人件費、人・日 = 人・時間 ÷ 8、人・週 = 人・日 ÷ 5、人・月 = 人・週 ÷ 4
+const TIME_UNIT_MULTIPLIER: Record<string, number> = { HOUR: 1, DAY: 1 / 8, WEEK: 1 / (8 * 5), MONTH: 1 / (8 * 5 * 4) };
 
 // ポイントを表示用にフォーマット
 function formatPoint(points: number, group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">): string {
