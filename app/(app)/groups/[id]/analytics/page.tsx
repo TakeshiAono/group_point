@@ -73,6 +73,20 @@ export default function GroupAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [pieMode, setPieMode] = useState<PieMode>("points");
   const [selectedMonth, setSelectedMonth] = useState<string>("current");
+  const [questTypeFilter, setQuestTypeFilter] = useState<Set<"GOVERNMENT" | "MEMBER">>(new Set(["GOVERNMENT", "MEMBER"]));
+
+  function toggleQuestType(type: "GOVERNMENT" | "MEMBER") {
+    setQuestTypeFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) {
+        if (next.size === 1) return prev; // 最低1つは残す
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  }
 
   useEffect(() => {
     Promise.all([
@@ -93,6 +107,9 @@ export default function GroupAnalyticsPage() {
   if (!group) return <div className="p-10 text-red-500">グループが見つかりません</div>;
 
   const pg: PointGroup = { pointUnit: group.pointUnit, laborCostPerHour: group.laborCostPerHour, timeUnit: group.timeUnit };
+
+  // ── クエストフィルター ─────────────────────────────────────
+  const filteredQuests = quests.filter((q) => questTypeFilter.has(q.questType));
 
   // ── 全月一覧 ───────────────────────────────────────────────
   const allMonths = Array.from(new Set([
@@ -122,7 +139,7 @@ export default function GroupAnalyticsPage() {
     }
   } else if (pieMode === "completions") {
     if (selectedMonth === "current") {
-      const completedQuests = quests.filter((q) => q.status === "COMPLETED");
+      const completedQuests = filteredQuests.filter((q) => q.status === "COMPLETED");
       const completionCount: Record<string, { member: Member; count: number }> = {};
       completedQuests.forEach((q) => {
         if (!q.completer) return;
@@ -171,6 +188,22 @@ export default function GroupAnalyticsPage() {
           ← {group.name}
         </Link>
         <h2 className="text-2xl font-bold text-gray-800">グループ分析</h2>
+      </div>
+
+      {/* クエスト種別フィルター */}
+      <div className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl px-5 py-3">
+        <span className="text-xs text-gray-500 shrink-0">クエスト種別</span>
+        {(["GOVERNMENT", "MEMBER"] as const).map((type) => (
+          <label key={type} className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={questTypeFilter.has(type)}
+              onChange={() => toggleQuestType(type)}
+              className="w-3.5 h-3.5 accent-blue-600"
+            />
+            <span className="text-xs text-gray-700">{type === "GOVERNMENT" ? "管理側" : "メンバー"}</span>
+          </label>
+        ))}
       </div>
 
       {/* 円グラフ（切り替えボタン + 期間セレクト） */}
