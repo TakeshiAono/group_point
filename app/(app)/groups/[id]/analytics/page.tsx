@@ -50,31 +50,54 @@ export default function GroupAnalyticsPage() {
   const { id: groupId } = useParams<{ id: string }>();
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // 上部（フィルター非依存）
   const [baseAnalytics, setBaseAnalytics] = useState<AnalyticsData | null>(null);
+  const [topGranularity, setTopGranularity] = useState<Granularity>("month");
+  const [topBucket, setTopBucket] = useState<string>("current");
+  const [topPieMode, setTopPieMode] = useState<TopPieMode>("points");
+
+  // 下部（フィルター依存）
   const [filteredAnalytics, setFilteredAnalytics] = useState<AnalyticsData | null>(null);
+  const [bottomGranularity, setBottomGranularity] = useState<Granularity>("month");
+  const [bottomBucket, setBottomBucket] = useState<string>("current");
+  const [questTypeFilter, setQuestTypeFilter] = useState<Set<"GOVERNMENT" | "MEMBER">>(
+    new Set(["GOVERNMENT", "MEMBER"])
+  );
 
   const STORAGE_KEY = `analytics-filter-${groupId}`;
 
-  function loadStorage() {
+  // localStorage 復元（初回のみ）
+  useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw) as { topPieMode: TopPieMode; selectedMonth: string; questTypes: ("GOVERNMENT" | "MEMBER")[]; granularity: Granularity };
-    } catch { return null; }
-  }
+      if (!raw) return;
+      const s = JSON.parse(raw) as Partial<{
+        topGranularity: Granularity; topBucket: string; topPieMode: TopPieMode;
+        bottomGranularity: Granularity; bottomBucket: string;
+        questTypes: ("GOVERNMENT" | "MEMBER")[];
+      }>;
+      if (s.topGranularity) setTopGranularity(s.topGranularity);
+      if (s.topBucket) setTopBucket(s.topBucket);
+      if (s.topPieMode) setTopPieMode(s.topPieMode);
+      if (s.bottomGranularity) setBottomGranularity(s.bottomGranularity);
+      if (s.bottomBucket) setBottomBucket(s.bottomBucket);
+      if (s.questTypes) setQuestTypeFilter(new Set(s.questTypes));
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  function saveStorage(data: { topPieMode: TopPieMode; selectedMonth: string; questTypes: ("GOVERNMENT" | "MEMBER")[]; granularity: Granularity }) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* ignore */ }
-  }
-
-  const saved = typeof window !== "undefined" ? loadStorage() : null;
-
-  const [topPieMode, setTopPieMode] = useState<TopPieMode>(saved?.topPieMode ?? "points");
-  const [selectedMonth, setSelectedMonth] = useState<string>(saved?.selectedMonth ?? "current");
-  const [questTypeFilter, setQuestTypeFilter] = useState<Set<"GOVERNMENT" | "MEMBER">>(
-    new Set(saved?.questTypes ?? ["GOVERNMENT", "MEMBER"])
-  );
-  const [granularity, setGranularity] = useState<Granularity>(saved?.granularity ?? "month");
+  // localStorage 保存
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        topGranularity, topBucket, topPieMode,
+        bottomGranularity, bottomBucket,
+        questTypes: Array.from(questTypeFilter),
+      }));
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topGranularity, topBucket, topPieMode, bottomGranularity, bottomBucket, questTypeFilter]);
 
   function toggleQuestType(type: "GOVERNMENT" | "MEMBER") {
     setQuestTypeFilter((prev) => {
@@ -89,74 +112,56 @@ export default function GroupAnalyticsPage() {
     });
   }
 
+  // グループ情報（初回のみ）
   useEffect(() => {
-    saveStorage({ topPieMode, selectedMonth, questTypes: Array.from(questTypeFilter), granularity });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topPieMode, selectedMonth, questTypeFilter, granularity]);
-
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/groups").then((r) => r.ok ? r.json() : []),
-      fetch(`/api/groups/${groupId}/analytics?questTypes=GOVERNMENT,MEMBER&granularity=${granularity}`).then((r) => r.ok ? r.json() : null),
-    ]).then(([groups, analyticsData]) => {
+    fetch("/api/groups").then((r) => r.ok ? r.json() : []).then((groups) => {
       if (Array.isArray(groups)) {
         const g = groups.find((x: Group) => x.id === groupId);
         if (g) setGroup(g);
       }
-      if (analyticsData) {
-        setBaseAnalytics(analyticsData);
-        const months = Array.from(new Set([
-          ...analyticsData.questTimeseries.map((x: { month: string }) => x.month),
-          ...analyticsData.proposalTimeseries.map((x: { month: string }) => x.month),
-        ])).sort() as string[];
-        setSelectedMonth((prev) => (prev === "current" ? (months[months.length - 1] ?? "current") : prev));
-      }
     }).finally(() => setLoading(false));
-  }, [groupId, granularity]);
+  }, [groupId]);
 
+  // 上部analytics（topGranularityが変わるたびに再フェッチ）
+  useEffect(() => {
+    fetch(`/api/groups/${groupId}/analytics?questTypes=GOVERNMENT,MEMBER&granularity=${topGranularity}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return;
+        setBaseAnalytics(data);
+        const buckets = Array.from(new Set([
+          ...data.questTimeseries.map((x: { month: string }) => x.month),
+          ...data.proposalTimeseries.map((x: { month: string }) => x.month),
+        ])).sort() as string[];
+        setTopBucket((prev) => (prev === "current" || !buckets.includes(prev))
+          ? (buckets[buckets.length - 1] ?? "current") : prev);
+      });
+  }, [groupId, topGranularity]);
+
+  // 下部analytics（bottomGranularity・questTypeFilterが変わるたびに再フェッチ）
   useEffect(() => {
     const questTypes = Array.from(questTypeFilter).join(",");
-    fetch(`/api/groups/${groupId}/analytics?questTypes=${questTypes}&granularity=${granularity}`)
+    fetch(`/api/groups/${groupId}/analytics?questTypes=${questTypes}&granularity=${bottomGranularity}`)
       .then((r) => r.ok ? r.json() : null)
-      .then((analyticsData) => {
-        if (analyticsData) setFilteredAnalytics(analyticsData);
+      .then((data) => {
+        if (!data) return;
+        setFilteredAnalytics(data);
+        const buckets = Array.from(new Set([
+          ...data.questTimeseries.map((x: { month: string }) => x.month),
+          ...data.proposalTimeseries.map((x: { month: string }) => x.month),
+        ])).sort() as string[];
+        setBottomBucket((prev) => (prev === "current" || !buckets.includes(prev))
+          ? (buckets[buckets.length - 1] ?? "current") : prev);
       });
-  }, [groupId, questTypeFilter, granularity]);
+  }, [groupId, questTypeFilter, bottomGranularity]);
 
   if (loading) return <div className="p-10 text-gray-500">読み込み中...</div>;
   if (!group) return <div className="p-10 text-red-500">グループが見つかりません</div>;
 
   const pg: PointGroup = { pointUnit: group.pointUnit, laborCostPerHour: group.laborCostPerHour, timeUnit: group.timeUnit };
 
-  const allMonths = Array.from(new Set([
-    ...(baseAnalytics?.questTimeseries.map((x) => x.month) ?? []),
-    ...(baseAnalytics?.proposalTimeseries.map((x) => x.month) ?? []),
-  ])).sort();
-
-  // ── 上部円グラフデータ ─────────────────────────────────────
+  // ── 上部データ ─────────────────────────────────────────────
   type PieEntry = { id: string; name: string; value: number; label: string };
-
-  let topPieData: PieEntry[] = [];
-  if (baseAnalytics) {
-    if (topPieMode === "points") {
-      topPieData = baseAnalytics.memberPointHistory
-        .map((mp) => {
-          const found = mp.history.find((h) => h.month === selectedMonth);
-          return { id: mp.memberId, name: mp.name, value: found?.balance ?? 0, label: formatPoint(found?.balance ?? 0, pg) };
-        })
-        .sort((a, b) => b.value - a.value);
-    } else {
-      topPieData = baseAnalytics.memberProposalHistory
-        .map((mp) => {
-          const found = mp.history.find((h) => h.month === selectedMonth);
-          return { id: mp.memberId, name: mp.name, value: found?.count ?? 0, label: `${found?.count ?? 0} 件` };
-        })
-        .filter((e) => e.value > 0)
-        .sort((a, b) => b.value - a.value);
-    }
-  }
-
-  // ── 上部折れ線データ ───────────────────────────────────────
   type LineRow = Record<string, string | number>;
 
   function buildLineRows<T extends { month: string }>(
@@ -174,46 +179,56 @@ export default function GroupAnalyticsPage() {
     });
   }
 
+  const topAllBuckets = Array.from(new Set([
+    ...(baseAnalytics?.questTimeseries.map((x) => x.month) ?? []),
+    ...(baseAnalytics?.proposalTimeseries.map((x) => x.month) ?? []),
+  ])).sort();
+
+  let topPieData: PieEntry[] = [];
+  if (baseAnalytics) {
+    if (topPieMode === "points") {
+      topPieData = baseAnalytics.memberPointHistory
+        .map((mp) => {
+          const found = mp.history.find((h) => h.month === topBucket);
+          return { id: mp.memberId, name: mp.name, value: found?.balance ?? 0, label: formatPoint(found?.balance ?? 0, pg) };
+        }).sort((a, b) => b.value - a.value);
+    } else {
+      topPieData = baseAnalytics.memberProposalHistory
+        .map((mp) => {
+          const found = mp.history.find((h) => h.month === topBucket);
+          return { id: mp.memberId, name: mp.name, value: found?.count ?? 0, label: `${found?.count ?? 0} 件` };
+        }).filter((e) => e.value > 0).sort((a, b) => b.value - a.value);
+    }
+  }
+
   const topLineRows = baseAnalytics
     ? topPieMode === "points"
       ? buildLineRows(baseAnalytics.memberPointHistory, (h) => (h as { month: string; balance: number }).balance)
       : buildLineRows(baseAnalytics.memberProposalHistory, (h) => (h as { month: string; count: number }).count)
     : [];
-
   const topLineMembers = baseAnalytics
     ? (topPieMode === "points" ? baseAnalytics.memberPointHistory : baseAnalytics.memberProposalHistory)
     : [];
 
-  // ── 下部円グラフデータ ─────────────────────────────────────
+  // ── 下部データ ─────────────────────────────────────────────
+  const bottomAllBuckets = Array.from(new Set([
+    ...(filteredAnalytics?.questTimeseries.map((x) => x.month) ?? []),
+    ...(filteredAnalytics?.proposalTimeseries.map((x) => x.month) ?? []),
+  ])).sort();
+
   let completionPieData: PieEntry[] = [];
   if (filteredAnalytics) {
     completionPieData = filteredAnalytics.memberCompletionHistory
       .map((mp) => {
-        const found = mp.history.find((h) => h.month === selectedMonth);
+        const found = mp.history.find((h) => h.month === bottomBucket);
         return { id: mp.memberId, name: mp.name, value: found?.count ?? 0, label: `${found?.count ?? 0} 件` };
-      })
-      .filter((e) => e.value > 0)
-      .sort((a, b) => b.value - a.value);
+      }).filter((e) => e.value > 0).sort((a, b) => b.value - a.value);
   }
 
-  // ── 下部折れ線データ ───────────────────────────────────────
   const completionLineRows = filteredAnalytics
     ? buildLineRows(filteredAnalytics.memberCompletionHistory, (h) => (h as { month: string; count: number }).count)
     : [];
-
   const completionLineMembers = filteredAnalytics?.memberCompletionHistory ?? [];
-
-  const monthSelector = (
-    <select
-      value={selectedMonth}
-      onChange={(e) => setSelectedMonth(e.target.value)}
-      className="ml-auto text-xs border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-    >
-      {[...allMonths].reverse().map((m) => (
-        <option key={m} value={m}>{m}</option>
-      ))}
-    </select>
-  );
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
@@ -231,21 +246,18 @@ export default function GroupAnalyticsPage() {
         toggleButtons={
           <div className="flex gap-1.5">
             {(["points", "proposals"] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setTopPieMode(mode)}
-                className={`px-3 py-1 text-xs rounded-full border transition ${
-                  topPieMode === mode
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "text-gray-600 border-gray-300 hover:border-blue-400"
-                }`}
-              >
+              <button key={mode} onClick={() => setTopPieMode(mode)}
+                className={`px-3 py-1 text-xs rounded-full border transition ${topPieMode === mode ? "bg-blue-600 text-white border-blue-600" : "text-gray-600 border-gray-300 hover:border-blue-400"}`}>
                 {mode === "points" ? "保有ポイント" : "提案数"}
               </button>
             ))}
           </div>
         }
-        monthSelector={monthSelector}
+        allBuckets={topAllBuckets}
+        selectedBucket={topBucket}
+        onBucketChange={setTopBucket}
+        granularity={topGranularity}
+        onGranularityChange={(g) => { setTopGranularity(g); setTopBucket("current"); }}
         pieData={topPieData}
         formatPieValue={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
         lineRows={topLineRows}
@@ -253,35 +265,13 @@ export default function GroupAnalyticsPage() {
         formatLineTooltip={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
       />
 
-      {/* 時系列粒度 */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-500">折れ線グラフ単位</span>
-        {(["month", "week"] as const).map((g) => (
-          <button
-            key={g}
-            onClick={() => { setGranularity(g); setSelectedMonth("current"); }}
-            className={`px-3 py-1 text-xs rounded-full border transition ${
-              granularity === g
-                ? "bg-blue-600 text-white border-blue-600"
-                : "text-gray-600 border-gray-300 hover:border-blue-400"
-            }`}
-          >
-            {g === "month" ? "月単位" : "週単位"}
-          </button>
-        ))}
-      </div>
-
       {/* クエスト種別フィルター */}
       <div className="flex items-center gap-4 bg-white border border-blue-100 rounded-xl px-5 py-3">
         <span className="text-xs text-gray-500 shrink-0">クエスト種別フィルター</span>
         {(["GOVERNMENT", "MEMBER"] as const).map((type) => (
           <label key={type} className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={questTypeFilter.has(type)}
-              onChange={() => toggleQuestType(type)}
-              className="w-3.5 h-3.5 accent-blue-600"
-            />
+            <input type="checkbox" checked={questTypeFilter.has(type)} onChange={() => toggleQuestType(type)}
+              className="w-3.5 h-3.5 accent-blue-600" />
             <span className="text-xs text-gray-700">{type === "GOVERNMENT" ? "管理側" : "メンバー"}</span>
           </label>
         ))}
@@ -291,7 +281,11 @@ export default function GroupAnalyticsPage() {
       {/* 下部：フィルター依存 */}
       <AnalysisSection
         title="クエスト完了数"
-        monthSelector={monthSelector}
+        allBuckets={bottomAllBuckets}
+        selectedBucket={bottomBucket}
+        onBucketChange={setBottomBucket}
+        granularity={bottomGranularity}
+        onGranularityChange={(g) => { setBottomGranularity(g); setBottomBucket("current"); }}
         pieData={completionPieData}
         formatPieValue={(v) => `${v} 件`}
         lineRows={completionLineRows}
@@ -308,18 +302,19 @@ type LineRow = Record<string, string | number>;
 type LineMember = { memberId: string; name: string };
 
 function AnalysisSection({
-  title,
-  toggleButtons,
-  monthSelector,
-  pieData,
-  formatPieValue,
-  lineRows,
-  lineMembers,
-  formatLineTooltip,
+  title, toggleButtons,
+  allBuckets, selectedBucket, onBucketChange,
+  granularity, onGranularityChange,
+  pieData, formatPieValue,
+  lineRows, lineMembers, formatLineTooltip,
 }: {
   title: string;
   toggleButtons?: React.ReactNode;
-  monthSelector?: React.ReactNode;
+  allBuckets: string[];
+  selectedBucket: string;
+  onBucketChange: (v: string) => void;
+  granularity: "month" | "week";
+  onGranularityChange: (g: "month" | "week") => void;
   pieData: PieEntry[];
   formatPieValue: (v: number | string) => string;
   lineRows: LineRow[];
@@ -332,28 +327,30 @@ function AnalysisSection({
       <div className="flex items-center gap-3 flex-wrap">
         <SubTitle>{title}</SubTitle>
         {toggleButtons}
-        {monthSelector}
       </div>
 
       {/* 円グラフ */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-6">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+        <div className="flex justify-end">
+          <select
+            value={selectedBucket}
+            onChange={(e) => onBucketChange(e.target.value)}
+            className="text-xs border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            {[...allBuckets].reverse().map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-6">
         {pieData.length === 0 ? (
           <p className="text-sm text-gray-400 py-8 text-center w-full">該当データなし</p>
         ) : (
           <>
             <ResponsiveContainer width={220} height={220}>
               <PieChart>
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  startAngle={90}
-                  endAngle={-270}
-                  label={false}
-                >
+                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                  outerRadius={90} startAngle={90} endAngle={-270} label={false}>
                   {pieData.map((entry, i) => (
                     <Cell key={entry.id} fill={MEMBER_COLORS[i % MEMBER_COLORS.length]} />
                   ))}
@@ -372,11 +369,22 @@ function AnalysisSection({
             </ul>
           </>
         )}
+        </div>
       </div>
 
-      {/* 折れ線グラフ */}
+      {/* 折れ線グラフ（粒度ドロップダウン付き） */}
       {lineRows.length >= 1 && lineMembers.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-end">
+            <select
+              value={granularity}
+              onChange={(e) => onGranularityChange(e.target.value as "month" | "week")}
+              className="text-xs border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="month">月単位</option>
+              <option value="week">週単位</option>
+            </select>
+          </div>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={lineRows}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -385,14 +393,8 @@ function AnalysisSection({
               <Tooltip formatter={(v, name) => [formatLineTooltip(v as number), name]} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               {lineMembers.map((mp, i) => (
-                <Line
-                  key={mp.memberId}
-                  type="monotone"
-                  dataKey={mp.name}
-                  stroke={MEMBER_COLORS[i % MEMBER_COLORS.length]}
-                  strokeWidth={2}
-                  dot={false}
-                />
+                <Line key={mp.memberId} type="linear" dataKey={mp.name}
+                  stroke={MEMBER_COLORS[i % MEMBER_COLORS.length]} strokeWidth={2} dot={false} />
               ))}
             </LineChart>
           </ResponsiveContainer>
