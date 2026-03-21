@@ -264,59 +264,63 @@ export default function GroupAnalyticsPage() {
       </div>
 
       {/* 上部：フィルター非依存 */}
-      <AnalysisSection
-        title={topPieMode === "points" ? "保有ポイント" : "提案数"}
-        toggleButtons={
-          <div className="flex gap-1.5">
-            {(["points", "proposals"] as const).map((mode) => (
-              <button key={mode} onClick={() => setTopPieMode(mode)}
-                className={`px-3 py-1 text-xs rounded-full border transition ${topPieMode === mode ? "bg-blue-600 text-white border-blue-600" : "text-gray-600 border-gray-300 hover:border-blue-400"}`}>
-                {mode === "points" ? "保有ポイント" : "提案数"}
-              </button>
-            ))}
-          </div>
-        }
-        allBuckets={topAllBuckets}
-        selectedBucket={topBucket}
-        onBucketChange={setTopBucket}
-        granularity={topGranularity}
-        onGranularityChange={(g) => setTopGranularity(g)}
-        pieData={topPieData}
-        formatPieValue={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
-        lineRows={topLineRows}
-        lineMembers={topLineMembers}
-        formatLineTooltip={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
-        myMemberId={myMemberId}
-      />
-
-      {/* クエスト種別フィルター */}
-      <div className="flex items-center gap-4 bg-white border border-blue-100 rounded-xl px-5 py-3">
-        <span className="text-xs text-gray-500 shrink-0">クエスト種別フィルター</span>
-        {(["GOVERNMENT", "MEMBER"] as const).map((type) => (
-          <label key={type} className="flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" checked={questTypeFilter.has(type)} onChange={() => toggleQuestType(type)}
-              className="w-3.5 h-3.5 accent-blue-600" />
-            <span className="text-xs text-gray-700">{type === "GOVERNMENT" ? "管理側" : "メンバー"}</span>
-          </label>
-        ))}
-        <span className="text-xs text-gray-400 ml-auto">↓ 以下のグラフに反映</span>
+      <div className="border border-gray-200 rounded-2xl p-5 space-y-3 bg-gray-50">
+        <p className="text-xs text-gray-400">クエスト種別に関係なく集計</p>
+        <AnalysisSection
+          title={topPieMode === "points" ? "保有ポイント" : "提案数"}
+          toggleButtons={
+            <div className="flex gap-1.5">
+              {(["points", "proposals"] as const).map((mode) => (
+                <button key={mode} onClick={() => setTopPieMode(mode)}
+                  className={`px-3 py-1 text-xs rounded-full border transition ${topPieMode === mode ? "bg-blue-600 text-white border-blue-600" : "text-gray-600 border-gray-300 hover:border-blue-400"}`}>
+                  {mode === "points" ? "保有ポイント" : "提案数"}
+                </button>
+              ))}
+            </div>
+          }
+          allBuckets={topAllBuckets}
+          selectedBucket={topBucket}
+          onBucketChange={setTopBucket}
+          granularity={topGranularity}
+          onGranularityChange={(g) => setTopGranularity(g)}
+          pieData={topPieData}
+          formatPieValue={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
+          lineRows={topLineRows}
+          lineMembers={topLineMembers}
+          formatLineTooltip={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
+          myMemberId={myMemberId}
+        />
       </div>
 
       {/* 下部：フィルター依存 */}
-      <AnalysisSection
-        title="クエスト完了数"
-        allBuckets={bottomAllBuckets}
-        selectedBucket={bottomBucket}
-        onBucketChange={setBottomBucket}
-        granularity={bottomGranularity}
-        onGranularityChange={(g) => setBottomGranularity(g)}
-        pieData={completionPieData}
-        formatPieValue={(v) => `${v} 件`}
-        lineRows={completionLineRows}
-        lineMembers={completionLineMembers}
-        formatLineTooltip={(v) => `${v} 件`}
-        myMemberId={myMemberId}
-      />
+      <div className="border border-gray-200 rounded-2xl p-5 space-y-3 bg-gray-50">
+        <div className="flex items-center gap-4 flex-wrap">
+          <p className="text-xs text-gray-400">クエスト種別でフィルター</p>
+          <div className="flex items-center gap-3 ml-auto">
+            {(["GOVERNMENT", "MEMBER"] as const).map((type) => (
+              <label key={type} className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" checked={questTypeFilter.has(type)} onChange={() => toggleQuestType(type)}
+                  className="w-3.5 h-3.5 accent-blue-600" />
+                <span className="text-xs text-gray-700">{type === "GOVERNMENT" ? "管理側" : "メンバー"}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <AnalysisSection
+          title="クエスト完了数"
+          allBuckets={bottomAllBuckets}
+          selectedBucket={bottomBucket}
+          onBucketChange={setBottomBucket}
+          granularity={bottomGranularity}
+          onGranularityChange={(g) => setBottomGranularity(g)}
+          pieData={completionPieData}
+          formatPieValue={(v) => `${v} 件`}
+          lineRows={completionLineRows}
+          lineMembers={completionLineMembers}
+          formatLineTooltip={(v) => `${v} 件`}
+          myMemberId={myMemberId}
+        />
+      </div>
     </div>
   );
 }
