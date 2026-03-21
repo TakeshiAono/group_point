@@ -89,6 +89,7 @@ export default function QuestDetailPage() {
   const [acceptError, setAcceptError] = useState("");
   const [editing, setEditing] = useState(false);
   const [bonusRules, setBonusRules] = useState<{ thresholdPercent: number; bonusRate: number }[]>([]);
+  const [proposerName, setProposerName] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/groups/${groupId}/quests/${questId}/bonus-rules`)
@@ -101,14 +102,21 @@ export default function QuestDetailPage() {
       fetch(`/api/groups/${groupId}/quests/${questId}`).then((r) => r.ok ? r.json() : Promise.reject()),
       fetch("/api/me").then((r) => r.ok ? r.json() : null),
       fetch("/api/groups").then((r) => r.ok ? r.json() : []),
+      fetch(`/api/groups/${groupId}/quest-proposals`).then((r) => r.ok ? r.json() : []),
     ])
-      .then(([questData, me, groups]) => {
+      .then(([questData, me, groups, proposals]) => {
         setQuest(questData);
         if (me?.id && Array.isArray(groups)) {
           const group = groups.find((g: { id: string; members: GroupMember[] }) => g.id === groupId);
           setMembers(group?.members ?? []);
           const m = group?.members.find((m: GroupMember) => m.user.id === me.id);
           if (m) setMyMember(m);
+        }
+        if (Array.isArray(proposals)) {
+          const proposal = proposals.find((p: { questId: string | null; proposer: { user: { name: string | null; email: string } } }) => p.questId === questId);
+          if (proposal) {
+            setProposerName(proposal.proposer?.user?.name ?? proposal.proposer?.user?.email ?? null);
+          }
         }
       })
       .catch(() => setError("クエストの取得に失敗しました"))
@@ -254,6 +262,12 @@ export default function QuestDetailPage() {
         </div>
 
         <dl className="space-y-3 border-t border-gray-100 pt-4 text-sm">
+          {proposerName && (
+            <div className="flex justify-between">
+              <dt className="text-gray-400">提案者</dt>
+              <dd className="text-gray-700 font-medium">{proposerName}</dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt className="text-gray-400">発行者</dt>
             <dd className="text-gray-700 font-medium">
