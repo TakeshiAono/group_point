@@ -104,6 +104,20 @@ export default function GroupDetailPage() {
           </div>
         </section>
 
+        {/* クエストへのリンク */}
+        <Link
+          href={`/groups/${id}/quests`}
+          className="block bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-gray-800">クエスト</p>
+              <p className="text-xs text-gray-400 mt-0.5">政府案件・メンバー案件の一覧と発行</p>
+            </div>
+            <span className="text-gray-400">→</span>
+          </div>
+        </Link>
+
         {/* 政府発行済みポイント管理 */}
         <IssuedPointsEditor
           groupId={id}

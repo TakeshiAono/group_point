@@ -83,11 +83,52 @@ async function main() {
     });
   }
 
+  const memberRecords: { id: string }[] = [];
   for (const member of members) {
-    await prisma.groupMember.upsert({
+    const m = await prisma.groupMember.upsert({
       where: { userId_groupId: { userId: member.id, groupId: group.id } },
       update: {},
-      create: { userId: member.id, groupId: group.id, role: "MEMBER", memberPoints: 0 },
+      create: { userId: member.id, groupId: group.id, role: "MEMBER", memberPoints: 100 },
+    });
+    memberRecords.push(m);
+  }
+
+  // ── クエスト作成 ──────────────────────────────────────────
+  const adminMember = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: admin.id, groupId: group.id } },
+  });
+  const leaderMembers = await Promise.all(
+    leaders.map((l) =>
+      prisma.groupMember.findUnique({
+        where: { userId_groupId: { userId: l.id, groupId: group.id } },
+      })
+    )
+  );
+
+  // 政府案件
+  const govQuests = [
+    { title: "道路の補修作業", description: "市内の主要道路のひび割れを修繕してください", pointReward: 200 },
+    { title: "公園の清掃活動", description: "市民公園のゴミ拾いと草刈りを行ってください", pointReward: 100 },
+    { title: "防災訓練の補助", description: "地域防災訓練のスタッフとして参加してください", pointReward: 150 },
+  ];
+  for (const q of govQuests) {
+    await prisma.quest.create({
+      data: { ...q, groupId: group.id, creatorId: adminMember!.id, questType: "GOVERNMENT" },
+    });
+  }
+
+  // メンバー案件（leader1が発行）
+  const memberQuests = [
+    { title: "引越しの手伝い", description: "来週末の引越しを手伝ってください", pointReward: 50 },
+    { title: "英語の翻訳", description: "書類1枚の日本語→英語翻訳をお願いします", pointReward: 30 },
+  ];
+  for (const q of memberQuests) {
+    await prisma.quest.create({
+      data: { ...q, groupId: group.id, creatorId: leaderMembers[0]!.id, questType: "MEMBER" },
+    });
+    await prisma.groupMember.update({
+      where: { id: leaderMembers[0]!.id },
+      data: { memberPoints: { decrement: q.pointReward } },
     });
   }
 
@@ -96,6 +137,7 @@ async function main() {
   console.log("   ADMIN  :", admin.email);
   console.log("   LEADER :", leaders.map((l) => l.email).join(", "));
   console.log("   MEMBER :", members.map((m) => m.email).join(", "));
+  console.log("   政府案件: 3件 / メンバー案件: 2件");
   console.log("   パスワード: password123");
 }
 
