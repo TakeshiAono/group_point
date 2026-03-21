@@ -46,17 +46,17 @@ export default function Sidebar() {
                 <li key={g.id}>
                   <Link
                     href={`/groups/${g.id}`}
-                    className={`block px-4 py-2.5 transition ${
+                    className={`flex items-center justify-between gap-2 px-4 py-2.5 transition ${
                       active
                         ? "bg-blue-50 text-blue-700"
                         : "text-gray-700 hover:bg-gray-50"
                     }`}
                   >
-                    <p className={`text-sm truncate ${active ? "font-medium" : ""}`}>{g.name}</p>
+                    <span className={`text-sm truncate ${active ? "font-medium" : ""}`}>{g.name}</span>
                     {myMember !== null && myMember !== undefined && (
-                      <p className={`text-xs mt-0.5 font-bold ${active ? "text-blue-500" : "text-gray-400"}`}>
+                      <span className={`text-xs font-bold shrink-0 ${active ? "text-blue-500" : "text-gray-400"}`}>
                         {myMember.memberPoints} pt
-                      </p>
+                      </span>
                     )}
                   </Link>
                 </li>
