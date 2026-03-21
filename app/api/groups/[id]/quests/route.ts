@@ -67,7 +67,7 @@ export async function POST(
     }
 
     // 政府の未割当ポイントを計算
-    // 未割当 = 発行済み - 流通中 - 既存のオープン政府案件の報酬合計
+    // 未割当 = 発行済み - 流通中（memberPoints合計）- 既存のオープン政府案件の報酬合計（escrow）
     const group = await prisma.group.findUnique({ where: { id: groupId } });
     const members = await prisma.groupMember.findMany({ where: { groupId } });
     const totalCirculating = members.reduce((sum, m) => sum + m.memberPoints, 0);
