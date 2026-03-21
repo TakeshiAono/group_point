@@ -24,8 +24,7 @@ export async function POST(_req: Request, { params }: Params) {
     where: { id: questId },
     include: {
       subQuests: {
-        where: { status: "ASSIGNED" },
-        select: { id: true, assigneeId: true, pointReward: true },
+        select: { id: true, status: true, assigneeId: true, pointReward: true },
       },
     },
   });
@@ -43,6 +42,17 @@ export async function POST(_req: Request, { params }: Params) {
     return NextResponse.json({ error: "進行中のクエストのみ完了できます" }, { status: 400 });
   }
 
+  // 依頼中（未承諾）のサブクエストがある場合は完了不可
+  const requestedSubQuests = quest.subQuests.filter((sq) => sq.status === "REQUESTED");
+  if (requestedSubQuests.length > 0) {
+    return NextResponse.json(
+      { error: `依頼中のサブクエストが ${requestedSubQuests.length} 件あります。すべて承諾または削除してから完了してください。` },
+      { status: 400 }
+    );
+  }
+
+  const assignedSubQuests = quest.subQuests.filter((sq) => sq.status === "ASSIGNED");
+
   // トランザクションで一括処理
   await prisma.$transaction(async (tx) => {
     // クエストを完了に変更
@@ -58,7 +68,7 @@ export async function POST(_req: Request, { params }: Params) {
     });
 
     // アサイン済みサブクエストの担当者にポイントを付与
-    for (const sq of quest.subQuests) {
+    for (const sq of assignedSubQuests) {
       if (sq.assigneeId && sq.pointReward > 0) {
         await tx.groupMember.update({
           where: { id: sq.assigneeId },
