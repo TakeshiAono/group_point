@@ -317,21 +317,6 @@ export default function GroupDetailPage() {
           />
         )}
 
-        {/* メンバー一覧（全員） */}
-        <MemberSection
-          title="メンバー"
-          members={[...group.members].sort((a, b) => {
-            const order = { ADMIN: 0, LEADER: 1, MEMBER: 2 };
-            return order[a.role] - order[b.role];
-          })}
-          groupId={id}
-          canDelete={canDelete}
-          onRemoved={removeMember}
-          inviteLeaderRole={myRole === "ADMIN" ? "LEADER" : undefined}
-          inviteMemberRole={myRole === "ADMIN" || myRole === "LEADER" ? "MEMBER" : undefined}
-          pointGroup={group}
-        />
-
         {/* ポイント付与（ADMINのみ） */}
         {myRole === "ADMIN" && (
           <GrantPointsSection
@@ -353,6 +338,21 @@ export default function GroupDetailPage() {
             }}
           />
         )}
+
+        {/* メンバー一覧（全員） */}
+        <MemberSection
+          title="メンバー"
+          members={[...group.members].sort((a, b) => {
+            const order = { ADMIN: 0, LEADER: 1, MEMBER: 2 };
+            return order[a.role] - order[b.role];
+          })}
+          groupId={id}
+          canDelete={canDelete}
+          onRemoved={removeMember}
+          inviteLeaderRole={myRole === "ADMIN" ? "LEADER" : undefined}
+          inviteMemberRole={myRole === "ADMIN" || myRole === "LEADER" ? "MEMBER" : undefined}
+          pointGroup={group}
+        />
       </main>
     </div>
   );
@@ -749,12 +749,17 @@ function GrantPointsSection({
   const [mode, setMode] = useState<"individual" | "all">("individual");
   const [selectedMemberId, setSelectedMemberId] = useState(members[0]?.id ?? "");
   const [amount, setAmount] = useState(0);
+  const [selectedInputUnit, setSelectedInputUnit] = useState(group.timeUnit);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const unitLabel = inputUnitLabel(group);
-  const isDecimalUnit = group.pointUnit === "円" && group.timeUnit !== "YEN" && group.laborCostPerHour > 0;
+  // 入力単位の切り替えが可能か（円表示 & 人件費設定済みの場合）
+  const canSelectUnit = group.pointUnit === "円" && group.laborCostPerHour > 0;
+  // 現在選択中の単位でのグループ設定（変換に使用）
+  const inputGroup = { ...group, timeUnit: canSelectUnit ? selectedInputUnit : group.timeUnit };
+  const unitLabel = inputUnitLabel(inputGroup);
+  const isDecimalUnit = inputGroup.pointUnit === "円" && inputGroup.timeUnit !== "YEN" && inputGroup.laborCostPerHour > 0;
   const step = isDecimalUnit ? 0.01 : 1;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -762,7 +767,7 @@ function GrantPointsSection({
     setError("");
     setSuccess("");
     if (amount <= 0) return;
-    const ptAmount = unitToPt(amount, group);
+    const ptAmount = unitToPt(amount, inputGroup);
     setSubmitting(true);
     try {
       const body: { amount: number; memberId?: string } = { amount: ptAmount };
@@ -843,7 +848,19 @@ function GrantPointsSection({
               className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               required
             />
-            <span className="text-sm text-gray-500">{unitLabel}</span>
+            {canSelectUnit ? (
+              <select
+                value={selectedInputUnit}
+                onChange={(e) => { setSelectedInputUnit(e.target.value); setAmount(0); }}
+                className="border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                {Object.entries(TIME_UNIT_LABEL).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-sm text-gray-500">{unitLabel}</span>
+            )}
           </div>
         </div>
         <button
