@@ -66,7 +66,14 @@ export default function QuestsPage() {
   }, [groupId]);
 
   const canCreateGov = myMember?.role === "ADMIN" || myMember?.role === "LEADER";
-  const filtered = quests.filter((q) => q.questType === tab);
+  const [showAll, setShowAll] = useState(false);
+
+  const ACTIVE_STATUSES: Quest["status"][] = ["OPEN", "IN_PROGRESS"];
+  const filteredByTab = quests.filter((q) => q.questType === tab);
+  const filtered = showAll
+    ? filteredByTab
+    : filteredByTab.filter((q) => ACTIVE_STATUSES.includes(q.status));
+  const hiddenCount = filteredByTab.length - filteredByTab.filter((q) => ACTIVE_STATUSES.includes(q.status)).length;
 
   return (
     <div>
@@ -123,7 +130,7 @@ export default function QuestsPage() {
             >
               {t === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
               <span className="ml-1.5 text-xs text-gray-400">
-                {quests.filter((q) => q.questType === t).length}
+                {quests.filter((q) => q.questType === t && ACTIVE_STATUSES.includes(q.status)).length}
               </span>
             </button>
           ))}
@@ -131,11 +138,23 @@ export default function QuestsPage() {
 
         {/* クエスト一覧 */}
         {filtered.length === 0 ? (
-          <p className="text-gray-400 text-sm py-8 text-center">クエストがありません</p>
+          <p className="text-gray-400 text-sm py-8 text-center">
+            {showAll ? "クエストがありません" : "受付中・進行中のクエストがありません"}
+          </p>
         ) : (
           <ul className="space-y-3">
             {filtered.map((q) => <QuestCard key={q.id} quest={q} groupId={groupId} />)}
           </ul>
+        )}
+
+        {/* 完了・キャンセル済みの表示切り替え */}
+        {hiddenCount > 0 && (
+          <button
+            onClick={() => setShowAll((v) => !v)}
+            className="w-full text-sm text-gray-400 hover:text-gray-600 transition py-2 border border-dashed border-gray-200 rounded-lg"
+          >
+            {showAll ? "完了・キャンセル済みを隠す" : `完了・キャンセル済みを表示（${hiddenCount}件）`}
+          </button>
         )}
       </main>
     </div>
