@@ -148,10 +148,14 @@ export default function QuestDetailPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10 space-y-6">
+    <div className="max-w-6xl mx-auto px-6 py-10">
       <Link href={`/groups/${groupId}/quests`} className="text-sm text-gray-400 hover:text-gray-600 transition">
         ← 案件一覧に戻る
       </Link>
+
+      <div className="flex gap-6 mt-6 items-start">
+        {/* 左: メインコンテンツ */}
+        <div className="flex-1 min-w-0 space-y-6">
 
       {/* クエスト詳細 */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
@@ -324,9 +328,13 @@ export default function QuestDetailPage() {
         )}
       </div>
 
-      {/* アクティビティログ */}
-      <QuestLogSection groupId={groupId} questId={questId} />
+        </div>{/* 左カラム終了 */}
 
+        {/* 右: アクティビティログ */}
+        <div className="w-80 shrink-0 sticky top-6">
+          <QuestLogSection groupId={groupId} questId={questId} />
+        </div>
+      </div>{/* flex終了 */}
     </div>
   );
 }
@@ -623,25 +631,27 @@ function QuestLogSection({ groupId, questId }: { groupId: string; questId: strin
       .then(setLogs);
   }, [groupId, questId]);
 
-  if (logs.length === 0) return null;
-
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-3">
-      <h3 className="font-semibold text-gray-800">アクティビティログ</h3>
-      <ul className="space-y-2">
-        {logs.map((log) => (
-          <li key={log.id} className="flex items-start gap-3 text-sm">
-            <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-gray-300 mt-2" />
-            <div className="flex-1 min-w-0">
-              <p className="text-gray-700">{log.detail}</p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {log.memberName ?? log.memberEmail ?? "システム"}
-                　{new Date(log.createdAt).toLocaleString("ja-JP")}
-              </p>
-            </div>
-          </li>
-        ))}
-      </ul>
+    <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col" style={{ maxHeight: "80vh" }}>
+      <h3 className="font-semibold text-gray-800 mb-3 shrink-0">アクティビティログ</h3>
+      {logs.length === 0 ? (
+        <p className="text-sm text-gray-400">まだ記録がありません</p>
+      ) : (
+        <ul className="space-y-3 overflow-y-auto flex-1 pr-1">
+          {logs.map((log) => (
+            <li key={log.id} className="flex items-start gap-2 text-sm">
+              <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-700 break-words">{log.detail}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {log.memberName ?? log.memberEmail ?? "システム"}
+                  　{new Date(log.createdAt).toLocaleString("ja-JP")}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
