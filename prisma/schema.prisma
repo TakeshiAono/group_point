@@ -196,6 +196,8 @@ model QuestProposal {
   status       QuestProposalStatus  @default(PENDING)
   /// 却下理由（任意）
   rejectReason String?
+  /// 承認時に発行されたQuest.id（任意）
+  questId      String?
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
   group        Group                @relation(fields: [groupId], references: [id], onDelete: Cascade)

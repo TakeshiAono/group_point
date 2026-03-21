@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function parseJson(res: Response): Promise<any> {
@@ -20,6 +21,7 @@ type QuestProposal = {
   description: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
   rejectReason: string | null;
+  questId: string | null;
   proposer: ProposalMember;
   createdAt: string;
 };
@@ -222,32 +224,45 @@ function ProposalCard({
     }
   }
 
+  const cardContent = (
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[proposal.status]}`}>
+            {STATUS_LABEL[proposal.status]}
+          </span>
+          <span className="text-xs text-gray-400">
+            提案者: {proposal.proposer?.user?.name ?? proposal.proposer?.user?.email ?? "不明"}
+          </span>
+          <span className="text-xs text-gray-400">
+            {new Date(proposal.createdAt).toLocaleDateString("ja-JP")}
+          </span>
+        </div>
+        <p className="font-medium text-gray-800">{proposal.title}</p>
+        {proposal.description && (
+          <p className="text-sm text-gray-500 mt-1">{proposal.description}</p>
+        )}
+        {proposal.status === "REJECTED" && proposal.rejectReason && (
+          <p className="text-xs text-red-500 mt-1 bg-red-50 px-2 py-1 rounded">
+            却下理由: {proposal.rejectReason}
+          </p>
+        )}
+        {proposal.status === "APPROVED" && proposal.questId && (
+          <p className="text-xs text-blue-500 mt-1">クリックしてクエスト詳細を見る →</p>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <li className="bg-white border border-gray-200 rounded-xl px-6 py-4 space-y-3">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[proposal.status]}`}>
-              {STATUS_LABEL[proposal.status]}
-            </span>
-            <span className="text-xs text-gray-400">
-              提案者: {proposal.proposer?.user?.name ?? proposal.proposer?.user?.email ?? "不明"}
-            </span>
-            <span className="text-xs text-gray-400">
-              {new Date(proposal.createdAt).toLocaleDateString("ja-JP")}
-            </span>
-          </div>
-          <p className="font-medium text-gray-800">{proposal.title}</p>
-          {proposal.description && (
-            <p className="text-sm text-gray-500 mt-1">{proposal.description}</p>
-          )}
-          {proposal.status === "REJECTED" && proposal.rejectReason && (
-            <p className="text-xs text-red-500 mt-1 bg-red-50 px-2 py-1 rounded">
-              却下理由: {proposal.rejectReason}
-            </p>
-          )}
-        </div>
-      </div>
+      {proposal.status === "APPROVED" && proposal.questId ? (
+        <Link href={`/groups/${groupId}/quests/${proposal.questId}`} className="block hover:opacity-80 transition">
+          {cardContent}
+        </Link>
+      ) : (
+        cardContent
+      )}
 
       {/* 承認/却下アクション（ADMIN/LEADERのみ、PENDINGのみ） */}
       {isAdmin && proposal.status === "PENDING" && (

@@ -57,31 +57,30 @@ export async function POST(
     );
   }
 
-  // 提案を承認し、クエストを作成
-  const [updatedProposal, quest] = await prisma.$transaction([
-    prisma.questProposal.update({
-      where: { id: proposalId },
-      data: { status: "APPROVED", title, description },
-      include: {
-        proposer: { include: { user: { select: { id: true, name: true, email: true } } } },
-      },
-    }),
-    prisma.quest.create({
-      data: {
-        groupId,
-        creatorId: approver.id,
-        title,
-        description,
-        pointReward,
-        questType: "GOVERNMENT",
-        deadline: proposal.deadline,
-      },
-      include: {
-        creator: { include: { user: { select: { id: true, name: true, email: true } } } },
-        completer: { include: { user: { select: { id: true, name: true, email: true } } } },
-      },
-    }),
-  ]);
+  // クエストを作成してから提案を承認（questIdを保存）
+  const quest = await prisma.quest.create({
+    data: {
+      groupId,
+      creatorId: approver.id,
+      title,
+      description,
+      pointReward,
+      questType: "GOVERNMENT",
+      deadline: proposal.deadline,
+    },
+    include: {
+      creator: { include: { user: { select: { id: true, name: true, email: true } } } },
+      completer: { include: { user: { select: { id: true, name: true, email: true } } } },
+    },
+  });
+
+  const updatedProposal = await prisma.questProposal.update({
+    where: { id: proposalId },
+    data: { status: "APPROVED", title, description, questId: quest.id },
+    include: {
+      proposer: { include: { user: { select: { id: true, name: true, email: true } } } },
+    },
+  });
 
   await addQuestLog({
     questId: quest.id,
