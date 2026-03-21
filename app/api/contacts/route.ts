@@ -27,22 +27,27 @@ export async function POST(req: Request) {
 
   const transporter = nodemailer.createTransport({
     host: CONTACT_SMTP_HOST,
-    port: Number(CONTACT_SMTP_PORT ?? 587),
-    secure: Number(CONTACT_SMTP_PORT ?? 587) === 465,
+    port: Number(CONTACT_SMTP_PORT ?? 1025),
+    secure: Number(CONTACT_SMTP_PORT ?? 1025) === 465,
     auth: CONTACT_SMTP_USER ? { user: CONTACT_SMTP_USER, pass: CONTACT_SMTP_PASS } : undefined,
   });
 
-  await transporter.sendMail({
-    from: CONTACT_MAIL_FROM ?? CONTACT_SMTP_USER,
-    to: CONTACT_MAIL_TO,
-    subject: `[お問い合わせ] ${title}`,
-    text: [
-      `送信者: ${session.user.name ?? ""} <${session.user.email}>`,
-      `タイトル: ${title}`,
-      "",
-      message,
-    ].join("\n"),
-  });
+  try {
+    await transporter.sendMail({
+      from: CONTACT_MAIL_FROM || "noreply@localhost",
+      to: CONTACT_MAIL_TO,
+      subject: `[お問い合わせ] ${title}`,
+      text: [
+        `送信者: ${session.user.name ?? ""} <${session.user.email}>`,
+        `タイトル: ${title}`,
+        "",
+        message,
+      ].join("\n"),
+    });
+  } catch (e) {
+    console.error("sendMail error:", e);
+    return NextResponse.json({ error: `メール送信に失敗しました: ${String(e)}` }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }
