@@ -116,6 +116,12 @@ export async function POST(_req: Request, { params }: Params) {
     }
   }
 
+  // 実際の総支払額を計算
+  const totalPayout = assignedSubQuests.reduce((sum, sq) => {
+    const bonus = Math.round(sq.pointReward * bonusRate / 100);
+    return sum + sq.pointReward + bonus;
+  }, 0);
+
   // トランザクションで一括処理
   await prisma.$transaction(async (tx) => {
     // クエストを完了に変更
@@ -137,6 +143,31 @@ export async function POST(_req: Request, { params }: Params) {
       await tx.subQuest.update({
         where: { id: sq.id },
         data: { status: "COMPLETED" },
+      });
+    }
+
+    // 支払者のポイントを調整
+    if (quest.questType === "MEMBER") {
+      // 作成時にエスクロー済みの額（quest.pointReward）との差分を調整
+      const diff = totalPayout - quest.pointReward;
+      if (diff > 0) {
+        // ボーナス分を発行者から追加徴収
+        await tx.groupMember.update({
+          where: { id: quest.creatorId },
+          data: { memberPoints: { decrement: diff } },
+        });
+      } else if (diff < 0) {
+        // ペナルティ分を発行者に返還
+        await tx.groupMember.update({
+          where: { id: quest.creatorId },
+          data: { memberPoints: { increment: -diff } },
+        });
+      }
+    } else if (quest.questType === "GOVERNMENT") {
+      // 政府案件: 実際の支払額をグループの発行済みポイントから差し引く
+      await tx.group.update({
+        where: { id: groupId },
+        data: { totalIssuedPoints: { decrement: totalPayout } },
       });
     }
   });
