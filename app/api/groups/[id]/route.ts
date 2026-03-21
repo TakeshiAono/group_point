@@ -40,8 +40,8 @@ export async function PATCH(
       data.laborCostPerHour = laborCostPerHour;
     }
     if (timeUnit !== undefined) {
-      if (!["HOUR", "WEEK", "MONTH"].includes(timeUnit)) {
-        return NextResponse.json({ error: "timeUnitはHOUR/WEEK/MONTHを指定してください" }, { status: 400 });
+      if (!["HOUR", "DAY", "WEEK", "MONTH"].includes(timeUnit)) {
+        return NextResponse.json({ error: "timeUnitはHOUR/DAY/WEEK/MONTHを指定してください" }, { status: 400 });
       }
       data.timeUnit = timeUnit;
     }

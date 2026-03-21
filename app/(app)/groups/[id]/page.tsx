@@ -24,18 +24,19 @@ type Group = {
   members: Member[];
 };
 
-const TIME_UNIT_LABEL: Record<string, string> = { HOUR: "人・時間", WEEK: "人・週", MONTH: "人・月" };
-const TIME_UNIT_HOURS: Record<string, number> = { HOUR: 1, WEEK: 40, MONTH: 160 };
+const TIME_UNIT_LABEL: Record<string, string> = { HOUR: "人・時間", DAY: "人・日", WEEK: "人・週", MONTH: "人・月" };
+// 人・時間 = pt ÷ 人件費、人・日 = 人・時間 × 8、人・週 = 人・日 × 5、人・月 = 人・週 × 4
+const TIME_UNIT_MULTIPLIER: Record<string, number> = { HOUR: 1, DAY: 8, WEEK: 8 * 5, MONTH: 8 * 5 * 4 };
 
 // ポイントを表示用にフォーマット
 function formatPoint(points: number, group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">): string {
-  if (group.pointUnit === "時間") {
-    return `${points.toLocaleString("ja-JP")} ${TIME_UNIT_LABEL[group.timeUnit] ?? "人・時間"}`;
+  if (group.pointUnit === "時間" && group.laborCostPerHour > 0) {
+    const personHours = points / group.laborCostPerHour; // 円 ÷ 人件費 = 人・時間
+    const value = personHours * (TIME_UNIT_MULTIPLIER[group.timeUnit] ?? 1);
+    return `${value.toLocaleString("ja-JP")} ${TIME_UNIT_LABEL[group.timeUnit] ?? "人・時間"}`;
   }
-  if (group.pointUnit === "円" && group.laborCostPerHour > 0) {
-    const hours = TIME_UNIT_HOURS[group.timeUnit] ?? 1;
-    const yen = points * hours * group.laborCostPerHour;
-    return `${yen.toLocaleString("ja-JP")} 円`;
+  if (group.pointUnit === "円") {
+    return `${points.toLocaleString("ja-JP")} 円`;
   }
   return `${points} pt`;
 }
