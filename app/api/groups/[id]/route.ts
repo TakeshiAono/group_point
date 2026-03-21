@@ -28,8 +28,8 @@ export async function PATCH(
     }
     const data: Record<string, unknown> = {};
     if (pointUnit !== undefined) {
-      if (!["pt", "時間", "円"].includes(pointUnit)) {
-        return NextResponse.json({ error: "pointUnitはpt・時間・円を指定してください" }, { status: 400 });
+      if (!["pt", "円"].includes(pointUnit)) {
+        return NextResponse.json({ error: "pointUnitはptまたは円を指定してください" }, { status: 400 });
       }
       data.pointUnit = pointUnit;
     }
@@ -40,8 +40,8 @@ export async function PATCH(
       data.laborCostPerHour = laborCostPerHour;
     }
     if (timeUnit !== undefined) {
-      if (!["HOUR", "DAY", "WEEK", "MONTH"].includes(timeUnit)) {
-        return NextResponse.json({ error: "timeUnitはHOUR/DAY/WEEK/MONTHを指定してください" }, { status: 400 });
+      if (!["YEN", "HOUR", "DAY", "WEEK", "MONTH"].includes(timeUnit)) {
+        return NextResponse.json({ error: "timeUnitはYEN/HOUR/DAY/WEEK/MONTHを指定してください" }, { status: 400 });
       }
       data.timeUnit = timeUnit;
     }

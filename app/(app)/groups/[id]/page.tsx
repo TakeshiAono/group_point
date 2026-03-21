@@ -24,19 +24,20 @@ type Group = {
   members: Member[];
 };
 
-const TIME_UNIT_LABEL: Record<string, string> = { HOUR: "人・時間", DAY: "人・日", WEEK: "人・週", MONTH: "人・月" };
+// timeUnit: YEN=円のまま表示、HOUR/DAY/WEEK/MONTH=人・時間換算
+const TIME_UNIT_LABEL: Record<string, string> = { YEN: "円", HOUR: "人・時間", DAY: "人・日", WEEK: "人・週", MONTH: "人・月" };
 // 人・時間 = pt ÷ 人件費、人・日 = 人・時間 × 8、人・週 = 人・日 × 5、人・月 = 人・週 × 4
 const TIME_UNIT_MULTIPLIER: Record<string, number> = { HOUR: 1, DAY: 8, WEEK: 8 * 5, MONTH: 8 * 5 * 4 };
 
 // ポイントを表示用にフォーマット
 function formatPoint(points: number, group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">): string {
-  if (group.pointUnit === "時間" && group.laborCostPerHour > 0) {
+  if (group.pointUnit === "円") {
+    if (group.timeUnit === "YEN" || !group.laborCostPerHour) {
+      return `${points.toLocaleString("ja-JP")} 円`;
+    }
     const personHours = points / group.laborCostPerHour; // 円 ÷ 人件費 = 人・時間
     const value = personHours * (TIME_UNIT_MULTIPLIER[group.timeUnit] ?? 1);
-    return `${value.toLocaleString("ja-JP")} ${TIME_UNIT_LABEL[group.timeUnit] ?? "人・時間"}`;
-  }
-  if (group.pointUnit === "円") {
-    return `${points.toLocaleString("ja-JP")} 円`;
+    return `${value.toLocaleString("ja-JP")} ${TIME_UNIT_LABEL[group.timeUnit]}`;
   }
   return `${points} pt`;
 }
@@ -575,17 +576,17 @@ function IssuedPointsEditor({
             <div>
               <p className="text-xs text-gray-500 mb-1">表示単位</p>
               <div className="flex gap-2">
-                {([["pt", "pt"], ["時間", "人・時間"], ["円", "円"]] as const).map(([val, label]) => (
-                  <label key={val} className="flex items-center gap-1.5 cursor-pointer text-sm">
-                    <input type="radio" checked={pointUnit === val} onChange={() => setPointUnit(val)} />
-                    {label}
+                {(["pt", "円"] as const).map((u) => (
+                  <label key={u} className="flex items-center gap-1.5 cursor-pointer text-sm">
+                    <input type="radio" checked={pointUnit === u} onChange={() => setPointUnit(u)} />
+                    {u}
                   </label>
                 ))}
               </div>
             </div>
-            {(pointUnit === "時間" || pointUnit === "円") && (
+            {pointUnit === "円" && (
               <div>
-                <p className="text-xs text-gray-500 mb-1">時間単位（1pt =）</p>
+                <p className="text-xs text-gray-500 mb-1">表示形式</p>
                 <select
                   value={timeUnit}
                   onChange={(e) => setTimeUnit(e.target.value)}
@@ -597,7 +598,7 @@ function IssuedPointsEditor({
                 </select>
               </div>
             )}
-            {pointUnit === "円" && (
+            {pointUnit === "円" && timeUnit !== "YEN" && (
               <div>
                 <p className="text-xs text-gray-500 mb-1">人件費（円/時間）</p>
                 <input
@@ -627,10 +628,11 @@ function IssuedPointsEditor({
               </button>
             </div>
           </div>
-          <p className="text-xs text-gray-400">
-            {pointUnit === "時間" && `例: 1200 pt → ${formatPoint(1200, { pointUnit: "時間", laborCostPerHour: laborCost, timeUnit })}`}
-            {pointUnit === "円" && laborCost > 0 && `例: 1200 pt → ${formatPoint(1200, { pointUnit: "円", laborCostPerHour: laborCost, timeUnit })}`}
-          </p>
+          {pointUnit === "円" && (
+            <p className="text-xs text-gray-400">
+              例: 1200 pt → {formatPoint(1200, { pointUnit: "円", laborCostPerHour: laborCost, timeUnit })}
+            </p>
+          )}
           {settingsError && <p className="text-xs text-red-600">{settingsError}</p>}
         </form>
       )}
