@@ -7,9 +7,10 @@ function toMonth(date: Date): string {
 }
 
 function toWeek(date: Date): string {
+  const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const weekOfMonth = Math.ceil(date.getDate() / 7);
-  return `${month}-w${weekOfMonth}`;
+  return `${year}-${month}-w${weekOfMonth}`;
 }
 
 function toBucket(date: Date, granularity: "month" | "week"): string {
