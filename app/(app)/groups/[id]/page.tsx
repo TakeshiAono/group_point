@@ -21,6 +21,7 @@ type Group = {
   pointUnit: string;
   laborCostPerHour: number;
   timeUnit: string;
+  proposalReward: number;
   members: Member[];
 };
 
@@ -317,6 +318,15 @@ export default function GroupDetailPage() {
             <span className="text-gray-400">→</span>
           </div>
         </Link>
+
+        {/* 提案報酬設定（ADMIN/LEADERのみ） */}
+        {(myRole === "ADMIN" || myRole === "LEADER") && (
+          <ProposalRewardEditor
+            groupId={id}
+            proposalReward={group.proposalReward}
+            onUpdated={(v) => setGroup((prev) => prev ? { ...prev, proposalReward: v } : prev)}
+          />
+        )}
 
         {/* 政府発行済みポイント管理（ADMIN/LEADERのみ） */}
         {group.totalIssuedPoints !== undefined && (
@@ -951,5 +961,82 @@ function DeltaForm({
       </form>
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
+  );
+}
+
+function ProposalRewardEditor({
+  groupId,
+  proposalReward,
+  onUpdated,
+}: {
+  groupId: string;
+  proposalReward: number;
+  onUpdated: (v: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(proposalReward);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/groups/${groupId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proposalReward: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "エラーが発生しました"); return; }
+      onUpdated(data.proposalReward);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-gray-800">クエスト提案報酬</h3>
+          <p className="text-xs text-gray-400 mt-0.5">提案が承認されたときに提案者へ付与する一律ポイント</p>
+        </div>
+        <button
+          onClick={() => { setEditing((v) => !v); setValue(proposalReward); setError(""); }}
+          className="text-xs text-gray-400 hover:text-gray-600 transition"
+        >
+          {editing ? "キャンセル" : "変更"}
+        </button>
+      </div>
+
+      {!editing ? (
+        <p className="text-2xl font-bold text-blue-600">
+          {proposalReward} <span className="text-sm font-normal text-gray-500">pt</span>
+        </p>
+      ) : (
+        <form onSubmit={handleSave} className="flex items-center gap-3">
+          <input
+            type="number"
+            min={0}
+            value={value}
+            onChange={(e) => setValue(Number(e.target.value))}
+            className="w-28 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            required
+          />
+          <span className="text-sm text-gray-500">pt</span>
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+          >
+            {saving ? "保存中..." : "保存"}
+          </button>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+        </form>
+      )}
+    </section>
   );
 }

@@ -16,17 +16,27 @@ export async function PATCH(
 
   const { id: groupId } = await params;
   const body = await req.json();
-  const { delta, pointUnit, laborCostPerHour, timeUnit } = body;
+  const { delta, pointUnit, laborCostPerHour, timeUnit, proposalReward } = body;
 
-  // グループ表示設定の更新（ADMINのみ）
-  if (pointUnit !== undefined || laborCostPerHour !== undefined || timeUnit !== undefined) {
+  // グループ表示設定の更新（ADMINのみ）/ 提案報酬設定（ADMIN/LEADER）
+  if (pointUnit !== undefined || laborCostPerHour !== undefined || timeUnit !== undefined || proposalReward !== undefined) {
     const operator = await prisma.groupMember.findUnique({
       where: { userId_groupId: { userId: session.user.id, groupId } },
     });
-    if (!operator || operator.role !== "ADMIN") {
-      return NextResponse.json({ error: "設定変更はADMINのみ実行できます" }, { status: 403 });
+    if (!operator || operator.role === "MEMBER") {
+      return NextResponse.json({ error: "設定変更はADMIN・LEADERのみ実行できます" }, { status: 403 });
+    }
+    // 表示設定（pointUnit / laborCostPerHour / timeUnit）はADMINのみ
+    if ((pointUnit !== undefined || laborCostPerHour !== undefined || timeUnit !== undefined) && operator.role !== "ADMIN") {
+      return NextResponse.json({ error: "表示設定変更はADMINのみ実行できます" }, { status: 403 });
     }
     const data: Record<string, unknown> = {};
+    if (proposalReward !== undefined) {
+      if (typeof proposalReward !== "number" || !Number.isInteger(proposalReward) || proposalReward < 0) {
+        return NextResponse.json({ error: "提案報酬は0以上の整数で指定してください" }, { status: 400 });
+      }
+      data.proposalReward = proposalReward;
+    }
     if (pointUnit !== undefined) {
       if (!["pt", "円"].includes(pointUnit)) {
         return NextResponse.json({ error: "pointUnitはptまたは円を指定してください" }, { status: 400 });
