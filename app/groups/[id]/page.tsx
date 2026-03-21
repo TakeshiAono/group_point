@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 
@@ -368,18 +369,47 @@ function IssuedPointsEditor({
       <h3 className="font-semibold text-gray-800">政府発行済みポイント</h3>
 
       {/* 現在の状態 */}
-      <div className="flex gap-6 text-sm">
-        <div>
-          <p className="text-gray-400 text-xs mb-0.5">発行済み</p>
-          <p className="text-2xl font-bold text-gray-800">{totalIssuedPoints} pt</p>
+      <div className="flex flex-col sm:flex-row gap-6 items-center">
+        {/* 円グラフ */}
+        <div className="w-48 h-48 shrink-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={[
+                  { name: "流通中", value: totalCirculating },
+                  { name: "未流通", value: Math.max(reclaimable, 0) },
+                ]}
+                cx="50%"
+                cy="50%"
+                innerRadius={40}
+                outerRadius={70}
+                dataKey="value"
+                startAngle={90}
+                endAngle={-270}
+              >
+                <Cell fill="#3b82f6" />
+                <Cell fill="#22c55e" />
+              </Pie>
+              <Tooltip formatter={(value: number) => `${value} pt`} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
-        <div>
-          <p className="text-gray-400 text-xs mb-0.5">流通中</p>
-          <p className="text-2xl font-bold text-blue-600">{totalCirculating} pt</p>
-        </div>
-        <div>
-          <p className="text-gray-400 text-xs mb-0.5">未流通（回収可能）</p>
-          <p className="text-2xl font-bold text-green-600">{reclaimable} pt</p>
+
+        {/* 数値サマリー */}
+        <div className="flex flex-wrap gap-6 text-sm">
+          <div>
+            <p className="text-gray-400 text-xs mb-0.5">発行済み</p>
+            <p className="text-2xl font-bold text-gray-800">{totalIssuedPoints} pt</p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-xs mb-0.5">流通中</p>
+            <p className="text-2xl font-bold text-blue-600">{totalCirculating} pt</p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-xs mb-0.5">未流通（回収可能）</p>
+            <p className="text-2xl font-bold text-green-600">{Math.max(reclaimable, 0)} pt</p>
+          </div>
         </div>
       </div>
 
