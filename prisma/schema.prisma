@@ -33,6 +33,12 @@ model Group {
   name              String
   /// 政府がこれまでに発行した累計ポイント数
   totalIssuedPoints Int           @default(0)
+  /// ポイントの表示単位: "pt" または "円"
+  pointUnit         String        @default("pt")
+  /// 1時間あたりの人件費（円）。円表示のときに使用
+  laborCostPerHour  Int           @default(0)
+  /// 1ptが表す時間単位: "HOUR"=時間, "WEEK"=週, "MONTH"=月
+  timeUnit          String        @default("HOUR")
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   members           GroupMember[]
