@@ -52,8 +52,11 @@ export default function SubQuestDetailPage() {
     id: string; questId: string; subQuestId: string;
   }>();
   const router = useRouter();
+  type GroupMember = { id: string; user: { id: string; name: string | null; email: string } };
+
   const [subQuest, setSubQuest] = useState<SubQuest | null>(null);
   const [myMemberId, setMyMemberId] = useState<string | null>(null);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [accepting, setAccepting] = useState(false);
@@ -65,9 +68,38 @@ export default function SubQuestDetailPage() {
   const [proposeError, setProposeError] = useState("");
   const [proposing2, setProposing2] = useState(false);
 
+  // 担当者変更
+  const [editingAssignee, setEditingAssignee] = useState(false);
+  const [newAssigneeId, setNewAssigneeId] = useState("");
+  const [assigneeError, setAssigneeError] = useState("");
+  const [assigneeSaving, setAssigneeSaving] = useState(false);
+
   // 承認・否認
   const [approving, setApproving] = useState(false);
   const [denying, setDenying] = useState(false);
+
+  async function handleAssigneeChange(e: React.FormEvent) {
+    e.preventDefault();
+    setAssigneeSaving(true);
+    setAssigneeError("");
+    try {
+      const res = await fetch(
+        `/api/groups/${groupId}/quests/${questId}/subquests/${subQuestId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ assigneeId: newAssigneeId || null }),
+        }
+      );
+      let data: { error?: string } & Record<string, unknown> = {};
+      try { data = await res.json(); } catch { /* ignore */ }
+      if (!res.ok) { setAssigneeError(data.error ?? "変更に失敗しました"); return; }
+      setSubQuest(data as SubQuest);
+      setEditingAssignee(false);
+    } finally {
+      setAssigneeSaving(false);
+    }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -80,8 +112,9 @@ export default function SubQuestDetailPage() {
         setSubQuest(sq);
         setProposedReward(sq.pointReward);
         if (me?.id && Array.isArray(groups)) {
-          const group = groups.find((g: { id: string; members: { id: string; user: { id: string } }[] }) => g.id === groupId);
-          const m = group?.members.find((m: { id: string; user: { id: string } }) => m.user.id === me.id);
+          const group = groups.find((g: { id: string; members: GroupMember[] }) => g.id === groupId);
+          setGroupMembers(group?.members ?? []);
+          const m = group?.members.find((m: GroupMember) => m.user.id === me.id);
           if (m) setMyMemberId(m.id);
         }
       })
@@ -246,12 +279,61 @@ export default function SubQuestDetailPage() {
         </div>
 
         <dl className="space-y-3 border-t border-gray-100 pt-4 text-sm">
-          <div className="flex justify-between">
+          <div className="flex justify-between items-start">
             <dt className="text-gray-400">担当者</dt>
-            <dd className="text-gray-700 font-medium">
-              {subQuest.assignee
-                ? subQuest.assignee.user.name ?? subQuest.assignee.user.email
-                : "未割当"}
+            <dd className="text-gray-700 font-medium text-right">
+              {!editingAssignee ? (
+                <div className="flex items-center gap-2">
+                  <span>
+                    {subQuest.assignee
+                      ? subQuest.assignee.user.name ?? subQuest.assignee.user.email
+                      : "未割当"}
+                  </span>
+                  {canDelete && (
+                    <button
+                      onClick={() => {
+                        setEditingAssignee(true);
+                        setNewAssigneeId(subQuest.assignee?.id ?? "");
+                      }}
+                      className="text-xs text-blue-500 hover:text-blue-700 transition"
+                    >
+                      編集
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <form onSubmit={handleAssigneeChange} className="space-y-2">
+                  <select
+                    value={newAssigneeId}
+                    onChange={(e) => setNewAssigneeId(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">未割当</option>
+                    {groupMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.user.name ?? m.user.email}
+                      </option>
+                    ))}
+                  </select>
+                  {assigneeError && <p className="text-xs text-red-600">{assigneeError}</p>}
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="submit"
+                      disabled={assigneeSaving}
+                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+                    >
+                      {assigneeSaving ? "保存中..." : "保存"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingAssignee(false)}
+                      className="px-3 py-1 text-xs text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                    >
+                      キャンセル
+                    </button>
+                  </div>
+                </form>
+              )}
             </dd>
           </div>
           <div className="flex justify-between">
