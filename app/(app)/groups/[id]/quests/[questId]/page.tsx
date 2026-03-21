@@ -315,8 +315,8 @@ export default function QuestDetailPage() {
         )}
       </div>
 
-      {/* ボーナス・ペナルティルール */}
-      {canManageSubQuest && quest.deadline && (
+      {/* ボーナス・ペナルティルール（発行者のみ） */}
+      {myMember && quest.creator.id === myMember.id && quest.deadline && (
         <BonusRulesSection groupId={groupId} questId={questId} />
       )}
     </div>

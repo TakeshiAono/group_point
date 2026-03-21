@@ -56,9 +56,9 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: "クエストが見つかりません" }, { status: 404 });
   }
 
-  // 発行者または受注者のみ操作可能
-  if (quest.creatorId !== member.id && quest.completerId !== member.id) {
-    return NextResponse.json({ error: "クエストの発行者または受注者のみ操作できます" }, { status: 403 });
+  // 発行者のみ操作可能
+  if (quest.creatorId !== member.id) {
+    return NextResponse.json({ error: "クエストの発行者のみ操作できます" }, { status: 403 });
   }
 
   const [rule] = await prisma.$queryRaw<
