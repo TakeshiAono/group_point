@@ -95,7 +95,7 @@ export default function GroupsPage() {
                   </div>
                   {g.totalIssuedPoints !== undefined && (
                     <p className="text-xs text-gray-500 mt-1">
-                      政府発行済みポイント: {g.totalIssuedPoints} pt
+                      管理側発行済みポイント: {g.totalIssuedPoints} pt
                     </p>
                   )}
                 </Link>
