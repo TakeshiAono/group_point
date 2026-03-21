@@ -96,12 +96,7 @@ export default function QuestProposalsPage() {
     <div>
       <main className="max-w-4xl mx-auto px-6 py-10 space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">管理者へのクエスト提案</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              メンバーからの提案一覧です。管理者が審査・承認します。
-            </p>
-          </div>
+          <h2 className="text-2xl font-bold text-gray-800">管理者へのクエスト提案</h2>
           {isMemberOnly && (
             <button
               onClick={() => setShowForm(true)}
@@ -255,9 +250,9 @@ function ProposalCard({
   );
 
   return (
-    <li className="bg-white border border-gray-200 rounded-xl px-6 py-4 space-y-3">
+    <li className="bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition space-y-3">
       {proposal.status === "APPROVED" && proposal.questId ? (
-        <Link href={`/groups/${groupId}/quests/${proposal.questId}`} className="block hover:opacity-80 transition">
+        <Link href={`/groups/${groupId}/quests/${proposal.questId}`} className="block">
           {cardContent}
         </Link>
       ) : (
