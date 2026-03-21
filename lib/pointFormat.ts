@@ -31,7 +31,7 @@ export function formatPoint(points: number, group: PointGroup): string {
     const value = personHours * (TIME_UNIT_MULTIPLIER[group.timeUnit] ?? 1);
     return `${value.toLocaleString("ja-JP")} ${TIME_UNIT_LABEL[group.timeUnit]}`;
   }
-  return `${displayed} pt`;
+  return `${displayed.toLocaleString("ja-JP")} pt`;
 }
 
 export function unitLabel(group: PointGroup): string {
