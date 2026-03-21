@@ -47,6 +47,7 @@ export default function QuestProposalsPage() {
   const [showForm, setShowForm] = useState(false);
 
   const isAdmin = myMember?.role === "ADMIN" || myMember?.role === "LEADER";
+  const isMemberOnly = myMember?.role === "MEMBER";
 
   useEffect(() => {
     Promise.all([
@@ -95,7 +96,7 @@ export default function QuestProposalsPage() {
               市民からの公共事業クエスト提案一覧です。政府関係者が審査・承認します。
             </p>
           </div>
-          {myMember && (
+          {isMemberOnly && (
             <button
               onClick={() => setShowForm(true)}
               className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
@@ -105,8 +106,8 @@ export default function QuestProposalsPage() {
           )}
         </div>
 
-        {/* 提案フォーム */}
-        {showForm && myMember && (
+        {/* 提案フォーム（MEMBERのみ） */}
+        {showForm && isMemberOnly && (
           <CreateProposalForm
             groupId={groupId}
             onCreated={onProposalCreated}
