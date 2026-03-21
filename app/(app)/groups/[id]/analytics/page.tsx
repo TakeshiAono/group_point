@@ -123,7 +123,15 @@ export default function GroupAnalyticsPage() {
         if (g) setGroup(g);
       }
       if (Array.isArray(questData)) setQuests(questData);
-      if (analyticsData) setAnalytics(analyticsData);
+      if (analyticsData) {
+        setAnalytics(analyticsData);
+        // "current" のままなら最新月にセット
+        const months = Array.from(new Set([
+          ...analyticsData.questTimeseries.map((x: { month: string }) => x.month),
+          ...analyticsData.proposalTimeseries.map((x: { month: string }) => x.month),
+        ])).sort() as string[];
+        setSelectedMonth((prev) => (prev === "current" ? (months[months.length - 1] ?? "current") : prev));
+      }
     }).finally(() => setLoading(false));
   }, [groupId]);
 
@@ -144,38 +152,17 @@ export default function GroupAnalyticsPage() {
   // ── 円グラフデータ ─────────────────────────────────────────
   type PieEntry = { id: string; name: string; value: number; label: string };
 
-  const memberColorIndex = (memberId: string, list: { memberId: string }[]) =>
-    list.findIndex((m) => m.memberId === memberId);
-
   let pieData: PieEntry[] = [];
 
-  if (pieMode === "points") {
-    if (selectedMonth === "current") {
-      const sorted = [...group.members].sort((a, b) => b.memberPoints - a.memberPoints);
-      pieData = sorted.map((m) => ({ id: m.id, name: m.user.name ?? m.user.email, value: m.memberPoints, label: formatPoint(m.memberPoints, pg) }));
-    } else if (analytics) {
+  if (analytics) {
+    if (pieMode === "points") {
       pieData = analytics.memberPointHistory
         .map((mp) => {
           const found = mp.history.find((h) => h.month === selectedMonth);
           return { id: mp.memberId, name: mp.name, value: found?.balance ?? 0, label: formatPoint(found?.balance ?? 0, pg) };
         })
         .sort((a, b) => b.value - a.value);
-    }
-  } else if (pieMode === "completions") {
-    if (selectedMonth === "current") {
-      const completedQuests = filteredQuests.filter((q) => q.status === "COMPLETED");
-      const completionCount: Record<string, { member: Member; count: number }> = {};
-      completedQuests.forEach((q) => {
-        if (!q.completer) return;
-        const m = group.members.find((m) => m.id === q.completer!.id);
-        if (!m) return;
-        if (!completionCount[m.id]) completionCount[m.id] = { member: m, count: 0 };
-        completionCount[m.id].count++;
-      });
-      pieData = Object.values(completionCount)
-        .sort((a, b) => b.count - a.count)
-        .map(({ member, count }) => ({ id: member.id, name: member.user.name ?? member.user.email, value: count, label: `${count} 件` }));
-    } else if (analytics) {
+    } else if (pieMode === "completions") {
       pieData = analytics.memberCompletionHistory
         .map((mp) => {
           const found = mp.history.find((h) => h.month === selectedMonth);
@@ -183,17 +170,7 @@ export default function GroupAnalyticsPage() {
         })
         .filter((e) => e.value > 0)
         .sort((a, b) => b.value - a.value);
-    }
-  } else {
-    if (selectedMonth === "current") {
-      pieData = (analytics?.memberProposalHistory ?? [])
-        .map((mp) => {
-          const total = mp.history.reduce((s, h) => s + h.count, 0);
-          return { id: mp.memberId, name: mp.name, value: total, label: `${total} 件` };
-        })
-        .filter((e) => e.value > 0)
-        .sort((a, b) => b.value - a.value);
-    } else if (analytics) {
+    } else {
       pieData = analytics.memberProposalHistory
         .map((mp) => {
           const found = mp.history.find((h) => h.month === selectedMonth);
@@ -255,7 +232,6 @@ export default function GroupAnalyticsPage() {
             onChange={(e) => setSelectedMonth(e.target.value)}
             className="ml-auto text-xs border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
           >
-            <option value="current">現在</option>
             {[...allMonths].reverse().map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
