@@ -39,6 +39,7 @@ export default function AllQuestsPage() {
   const [groupsWithQuests, setGroupsWithQuests] = useState<GroupWithQuests[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"ALL" | "GOVERNMENT" | "MEMBER">("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | Quest["status"]>("IN_PROGRESS");
 
   useEffect(() => {
     fetch("/api/groups")
@@ -62,15 +63,33 @@ export default function AllQuestsPage() {
   const filtered = groupsWithQuests
     .map((g) => ({
       ...g,
-      quests: g.quests.filter((q) => filter === "ALL" || q.questType === filter),
+      quests: g.quests.filter(
+        (q) =>
+          (filter === "ALL" || q.questType === filter) &&
+          (statusFilter === "ALL" || q.status === statusFilter)
+      ),
     }))
     .filter((g) => g.quests.length > 0);
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-10 space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-2xl font-bold text-gray-800">案件一覧</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {(["IN_PROGRESS", "OPEN", "COMPLETED", "ALL"] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 text-xs rounded-full border transition ${
+                statusFilter === s
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "text-gray-600 border-gray-300 hover:border-blue-400"
+              }`}
+            >
+              {s === "ALL" ? "すべて" : STATUS_LABEL[s]}
+            </button>
+          ))}
+          <span className="w-px bg-gray-200 mx-1" />
           {(["ALL", "GOVERNMENT", "MEMBER"] as const).map((f) => (
             <button
               key={f}
@@ -81,7 +100,7 @@ export default function AllQuestsPage() {
                   : "text-gray-600 border-gray-300 hover:border-blue-400"
               }`}
             >
-              {f === "ALL" ? "すべて" : f === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
+              {f === "ALL" ? "種別：すべて" : f === "GOVERNMENT" ? "政府案件" : "メンバー案件"}
             </button>
           ))}
         </div>
