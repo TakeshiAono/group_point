@@ -21,6 +21,7 @@ type Quest = {
   title: string;
   description: string | null;
   pointReward: number;
+  actualPaidPoints: number | null;
   questType: "GOVERNMENT" | "MEMBER";
   status: "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   creator: QuestMember;
@@ -237,9 +238,19 @@ export default function QuestDetailPage() {
           />
         )}
 
-        <div className="flex items-center gap-2 py-3 border-t border-gray-100">
-          <span className="text-sm text-gray-500">報酬</span>
-          <span className="text-2xl font-bold text-blue-600">{quest.pointReward} pt</span>
+        <div className="flex items-center gap-4 py-3 border-t border-gray-100">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">報酬</span>
+            <span className="text-2xl font-bold text-blue-600">{quest.pointReward} pt</span>
+          </div>
+          {quest.status === "COMPLETED" && quest.actualPaidPoints !== null && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-gray-400">実際の支払</span>
+              <span className={`text-lg font-bold ${quest.actualPaidPoints > quest.pointReward ? "text-green-600" : quest.actualPaidPoints < quest.pointReward ? "text-red-500" : "text-blue-600"}`}>
+                {quest.actualPaidPoints} pt
+              </span>
+            </div>
+          )}
         </div>
 
         <dl className="space-y-3 border-t border-gray-100 pt-4 text-sm">

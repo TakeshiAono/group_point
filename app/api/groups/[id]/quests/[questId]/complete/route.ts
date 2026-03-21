@@ -124,11 +124,8 @@ export async function POST(_req: Request, { params }: Params) {
 
   // トランザクションで一括処理
   await prisma.$transaction(async (tx) => {
-    // クエストを完了に変更
-    await tx.quest.update({
-      where: { id: questId },
-      data: { status: "COMPLETED" },
-    });
+    // クエストを完了に変更（実際の支払額を記録）
+    await tx.$executeRaw`UPDATE "Quest" SET status = 'COMPLETED', "actualPaidPoints" = ${totalPayout} WHERE id = ${questId}`;
 
     // アサイン済みサブクエストの担当者にポイントを付与（ボーナス/ペナルティ込み）
     for (const sq of assignedSubQuests) {
@@ -183,6 +180,7 @@ export async function POST(_req: Request, { params }: Params) {
 
   return NextResponse.json({
     ...updated,
+    actualPaidPoints: totalPayout,
     appliedBonus: appliedRule
       ? { thresholdPercent: appliedRule.thresholdPercent, bonusRate: appliedRule.bonusRate }
       : null,
