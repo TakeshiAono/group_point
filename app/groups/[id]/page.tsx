@@ -69,7 +69,18 @@ export default function GroupDetailPage() {
           </div>
           {leaders.length > 0 && (
             <ul className="space-y-2">
-              {leaders.map((m) => <MemberRow key={m.id} member={m} />)}
+              {leaders.map((m) => (
+                <MemberRow
+                  key={m.id}
+                  member={m}
+                  groupId={id}
+                  onRemoved={(removedId) =>
+                    setGroup((prev) =>
+                      prev ? { ...prev, members: prev.members.filter((x) => x.id !== removedId) } : prev
+                    )
+                  }
+                />
+              ))}
             </ul>
           )}
           <InviteForm groupId={id} role="LEADER" />
@@ -83,7 +94,18 @@ export default function GroupDetailPage() {
           </div>
           {regularMembers.length > 0 && (
             <ul className="space-y-2">
-              {regularMembers.map((m) => <MemberRow key={m.id} member={m} />)}
+              {regularMembers.map((m) => (
+                <MemberRow
+                  key={m.id}
+                  member={m}
+                  groupId={id}
+                  onRemoved={(removedId) =>
+                    setGroup((prev) =>
+                      prev ? { ...prev, members: prev.members.filter((x) => x.id !== removedId) } : prev
+                    )
+                  }
+                />
+              ))}
             </ul>
           )}
           <InviteForm groupId={id} role="MEMBER" />
@@ -150,7 +172,28 @@ function InviteForm({ groupId, role }: { groupId: string; role: "LEADER" | "MEMB
   );
 }
 
-function MemberRow({ member }: { member: Member }) {
+function MemberRow({
+  member,
+  groupId,
+  onRemoved,
+}: {
+  member: Member;
+  groupId: string;
+  onRemoved: (id: string) => void;
+}) {
+  const [removing, setRemoving] = useState(false);
+
+  async function handleRemove() {
+    if (!confirm(`${member.user.name ?? member.user.email} をグループから外しますか？`)) return;
+    setRemoving(true);
+    try {
+      await fetch(`/api/groups/${groupId}/members/${member.id}`, { method: "DELETE" });
+      onRemoved(member.id);
+    } finally {
+      setRemoving(false);
+    }
+  }
+
   return (
     <li className="bg-white border border-gray-200 rounded-lg px-5 py-3 flex items-center justify-between">
       <div>
@@ -161,7 +204,16 @@ function MemberRow({ member }: { member: Member }) {
           <span className="ml-2 text-xs text-gray-400">{member.user.email}</span>
         )}
       </div>
-      <span className="text-sm text-gray-600">{member.memberPoints} pt</span>
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-gray-600">{member.memberPoints} pt</span>
+        <button
+          onClick={handleRemove}
+          disabled={removing}
+          className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50 transition"
+        >
+          {removing ? "..." : "外す"}
+        </button>
+      </div>
     </li>
   );
 }
