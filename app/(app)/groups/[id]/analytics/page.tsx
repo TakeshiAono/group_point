@@ -355,7 +355,7 @@ function AnalysisSection({
       </div>
 
       {/* 折れ線グラフ */}
-      {lineRows.length > 1 && lineMembers.length > 0 && (
+      {lineRows.length >= 1 && lineMembers.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={lineRows}>
