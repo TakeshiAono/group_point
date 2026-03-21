@@ -219,8 +219,9 @@ export default function GroupDetailPage() {
           </div>
         </section>
 
-        {/* 自分の情報 */}
+        {/* 自分の情報 ＋ クエスト提案 2列 */}
         {myMember && (
+        <div className="grid grid-cols-2 gap-4 items-start">
           <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
             <h3 className="font-semibold text-gray-800">自分の情報</h3>
             <div className="flex items-center gap-3">
@@ -295,6 +296,20 @@ export default function GroupDetailPage() {
               )}
             </div>
           </section>
+
+          <Link
+            href={`/groups/${id}/quest-proposals`}
+            className="block bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-gray-800">管理者へのクエスト提案</p>
+                <p className="text-xs text-gray-400 mt-0.5">メンバーからの提案一覧・審査承認</p>
+              </div>
+              <span className="text-gray-400">→</span>
+            </div>
+          </Link>
+        </div>
         )}
 
         {/* クエストへのリンク */}
@@ -306,20 +321,6 @@ export default function GroupDetailPage() {
             <div>
               <p className="font-semibold text-gray-800">クエスト</p>
               <p className="text-xs text-gray-400 mt-0.5">管理側案件・メンバー案件の一覧と発行</p>
-            </div>
-            <span className="text-gray-400">→</span>
-          </div>
-        </Link>
-
-        {/* 管理者へのクエスト提案へのリンク */}
-        <Link
-          href={`/groups/${id}/quest-proposals`}
-          className="block bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-gray-800">管理者へのクエスト提案</p>
-              <p className="text-xs text-gray-400 mt-0.5">メンバーからの提案一覧・審査承認</p>
             </div>
             <span className="text-gray-400">→</span>
           </div>
