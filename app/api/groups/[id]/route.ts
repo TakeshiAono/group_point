@@ -61,8 +61,13 @@ export async function PATCH(
       }
       data.displayMultiplier = displayMultiplier;
     }
-    const updated = await prisma.group.update({ where: { id: groupId }, data });
-    return NextResponse.json(updated);
+    try {
+      const updated = await prisma.group.update({ where: { id: groupId }, data });
+      return NextResponse.json(updated);
+    } catch (e) {
+      console.error("group update error:", e);
+      return NextResponse.json({ error: String(e) }, { status: 500 });
+    }
   }
 
   if (typeof delta !== "number" || !Number.isInteger(delta) || delta === 0) {

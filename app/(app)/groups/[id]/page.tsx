@@ -434,8 +434,9 @@ function IssuedPointsEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pointUnit, laborCostPerHour: laborCost, timeUnit, displayMultiplier }),
       });
-      const data = await res.json();
-      if (!res.ok) { setSettingsError(data.error ?? "エラーが発生しました"); return; }
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!res.ok) { setSettingsError(data.error ?? `エラー (${res.status})`); return; }
       onSettingsUpdated({ pointUnit: data.pointUnit, laborCostPerHour: data.laborCostPerHour, timeUnit: data.timeUnit, displayMultiplier: data.displayMultiplier });
       setSettingsOpen(false);
     } finally {
