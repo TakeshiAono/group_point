@@ -41,37 +41,44 @@ export default function InvitationList() {
 
   return (
     <section>
-      <h3 className="font-semibold text-gray-700 mb-3">
-        招待が届いています
-        <span className="ml-2 text-blue-600 font-bold">{invitations.length}</span>
-      </h3>
+      <div className="flex items-center gap-3 mb-4">
+        <h3 className="font-bold text-slate-700 text-lg">招待が届いています</h3>
+        <span className="px-2.5 py-0.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-bold rounded-full shadow">
+          {invitations.length}
+        </span>
+      </div>
       <ul className="space-y-3">
         {invitations.map((inv) => (
           <li
             key={inv.id}
-            className="bg-white border border-blue-200 rounded-xl px-6 py-4 flex items-center justify-between gap-4"
+            className="bg-white border border-indigo-100 rounded-xl px-6 py-4 flex items-center justify-between gap-4 shadow-sm hover:shadow-md transition"
           >
-            <div>
-              <p className="text-sm font-medium text-gray-800">
-                <span className="text-blue-600">{inv.group.name}</span> から招待が届いています
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                招待者: {inv.inviter.user.name ?? inv.inviter.user.email} ／
-                ロール: {inv.role === "LEADER" ? "管理側メンバー（LEADER）" : "一般メンバー"}
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-lg shadow">
+                {inv.group.name[0]}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">
+                  <span className="text-indigo-600">{inv.group.name}</span> から招待が届いています
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  招待者: {inv.inviter.user.name ?? inv.inviter.user.email} ／
+                  ロール: {inv.role === "LEADER" ? "管理側メンバー（LEADER）" : "一般メンバー"}
+                </p>
+              </div>
             </div>
             <div className="flex gap-2 shrink-0">
               <button
                 onClick={() => respond(inv.id, "accept")}
                 disabled={processing === inv.id}
-                className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+                className="px-4 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm rounded-lg hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 transition shadow shadow-indigo-200"
               >
                 承認
               </button>
               <button
                 onClick={() => respond(inv.id, "decline")}
                 disabled={processing === inv.id}
-                className="px-4 py-1.5 bg-gray-100 text-gray-600 text-sm rounded-lg hover:bg-gray-200 disabled:opacity-50 transition"
+                className="px-4 py-1.5 bg-slate-100 text-slate-600 text-sm rounded-lg hover:bg-slate-200 disabled:opacity-50 transition"
               >
                 拒否
               </button>

@@ -9,14 +9,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-slate-50">
       {/* ヘッダー */}
-      <header className="bg-white border-b border-gray-200 z-10 shrink-0">
+      <header className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 z-10 shrink-0 shadow-lg">
         <div className="px-4 py-3 flex items-center gap-4">
           {/* サイドバートグル */}
           <button
             onClick={() => setSidebarOpen((prev) => !prev)}
-            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition"
+            className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition"
             aria-label="サイドバーを切り替え"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -24,38 +24,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </svg>
           </button>
 
-          <Link href="/" className="text-lg font-bold text-gray-800 mr-auto">
+          <Link href="/" className="text-lg font-bold text-white mr-auto tracking-wide flex items-center gap-2">
+            <span className="text-2xl">⬡</span>
             Group Point
           </Link>
 
-          <Link
-            href="/quests"
-            className="text-sm text-gray-600 hover:text-blue-600 transition"
-          >
-            案件一覧
-          </Link>
-          <Link
-            href="/subquests"
-            className="text-sm text-gray-600 hover:text-blue-600 transition"
-          >
-            サブクエスト一覧
-          </Link>
-          <Link
-            href="/profile"
-            className="text-sm text-gray-600 hover:text-blue-600 transition"
-          >
-            プロフィール
-          </Link>
-          <Link
-            href="/contact"
-            className="text-sm text-gray-600 hover:text-blue-600 transition"
-          >
-            お問い合わせ
-          </Link>
+          <nav className="flex items-center gap-1">
+            {[
+              { href: "/quests", label: "案件一覧" },
+              { href: "/subquests", label: "サブクエスト" },
+              { href: "/profile", label: "プロフィール" },
+              { href: "/contact", label: "お問い合わせ" },
+            ].map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="text-sm text-white/80 hover:text-white hover:bg-white/10 px-3 py-1.5 rounded-lg transition"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+
           <form action={logout}>
             <button
               type="submit"
-              className="text-sm px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+              className="text-sm px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition"
             >
               ログアウト
             </button>

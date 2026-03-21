@@ -51,53 +51,78 @@ export default function GroupsPage() {
     }
   }
 
+  const GRADIENT_COLORS = [
+    "from-indigo-500 to-violet-600",
+    "from-violet-500 to-purple-600",
+    "from-blue-500 to-indigo-600",
+    "from-purple-500 to-pink-600",
+    "from-cyan-500 to-blue-600",
+  ];
+
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10 space-y-8">
+    <div className="max-w-3xl mx-auto px-6 py-10 space-y-10">
+      {/* 作成フォーム */}
       <section>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">グループを作成</h2>
+        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <span className="w-1 h-6 bg-gradient-to-b from-indigo-500 to-violet-600 rounded-full inline-block" />
+          グループを作成
+        </h2>
         <form onSubmit={handleCreate} className="flex gap-3">
           <input
             type="text"
             value={newGroupName}
             onChange={(e) => setNewGroupName(e.target.value)}
-            placeholder="グループ名"
-            className="flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="グループ名を入力..."
+            className="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white shadow-sm"
             required
           />
           <button
             type="submit"
             disabled={creating}
-            className="px-5 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+            className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition shadow-lg shadow-indigo-200"
           >
             {creating ? "作成中..." : "作成"}
           </button>
         </form>
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
       </section>
 
+      {/* グループ一覧 */}
       <section>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">グループ一覧</h2>
+        <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <span className="w-1 h-6 bg-gradient-to-b from-indigo-500 to-violet-600 rounded-full inline-block" />
+          グループ一覧
+        </h2>
         {groups.length === 0 ? (
-          <p className="text-gray-500 text-sm">グループがありません。</p>
+          <div className="text-center py-16 text-slate-400">
+            <p className="text-4xl mb-3">⬡</p>
+            <p className="text-sm">グループがまだありません。最初のグループを作成しましょう。</p>
+          </div>
         ) : (
           <ul className="space-y-3">
-            {groups.map((g) => (
+            {groups.map((g, i) => (
               <li key={g.id}>
                 <Link
                   href={`/groups/${g.id}`}
-                  className="block bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition"
+                  className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-6 py-5 hover:shadow-lg hover:-translate-y-0.5 transition-all shadow-sm"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-800">{g.name}</span>
-                    <span className="text-xs text-gray-400">
-                      メンバー {g.members.length}人
-                    </span>
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${GRADIENT_COLORS[i % GRADIENT_COLORS.length]} flex items-center justify-center text-white font-bold text-xl shadow`}>
+                    {g.name[0]}
                   </div>
-                  {g.totalIssuedPoints !== undefined && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      管理側発行済みポイント: {g.totalIssuedPoints} pt
-                    </p>
-                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-800 text-base">{g.name}</p>
+                    {g.totalIssuedPoints !== undefined && (
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        発行済み: <span className="font-semibold text-indigo-500">{g.totalIssuedPoints.toLocaleString("ja-JP")} pt</span>
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-xs text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">
+                      {g.members.length} 人
+                    </span>
+                    <span className="text-slate-300">→</span>
+                  </div>
                 </Link>
               </li>
             ))}

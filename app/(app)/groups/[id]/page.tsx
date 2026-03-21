@@ -161,7 +161,14 @@ export default function GroupDetailPage() {
     }).catch((e) => console.error("データの取得に失敗しました", e));
   }, [id]);
 
-  if (!group) return <div className="p-10 text-gray-500">読み込み中...</div>;
+  if (!group) return (
+    <div className="flex items-center justify-center p-20">
+      <div className="flex flex-col items-center gap-3 text-slate-400">
+        <div className="w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm">読み込み中...</p>
+      </div>
+    </div>
+  );
 
   const myMember = group.members.find((m) => m.user.id === myUserId);
   const myRole = myMember?.role ?? "MEMBER";
@@ -189,19 +196,27 @@ export default function GroupDetailPage() {
 
   return (
     <div>
-      <main className="max-w-4xl mx-auto px-6 py-10 space-y-8">
-        <section>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-2xl font-bold text-gray-800">{group.name}</h2>
-            {myRole !== "MEMBER" && (
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_BADGE[myRole]}`}>
-                {ROLE_LABEL[myRole]}
-              </span>
-            )}
+      <main className="max-w-4xl mx-auto px-6 py-10 space-y-6">
+        {/* グループヘッダー */}
+        <section className="relative bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 rounded-2xl p-6 shadow-xl overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4 pointer-events-none" />
+          <div className="relative flex items-center gap-3 flex-wrap">
+            <div>
+              <h2 className="text-2xl font-bold text-white">{group.name}</h2>
+              {myRole !== "MEMBER" && (
+                <span className="inline-block mt-1 text-xs px-2.5 py-0.5 rounded-full font-medium bg-white/20 text-white border border-white/20">
+                  {ROLE_LABEL[myRole]}
+                </span>
+              )}
+            </div>
             <Link
               href={`/groups/${id}/analytics`}
-              className="text-sm px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              className="ml-auto text-sm px-5 py-2 bg-white/15 hover:bg-white/25 text-white rounded-lg border border-white/20 transition flex items-center gap-2"
             >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
               分析
             </Link>
           </div>
@@ -223,11 +238,14 @@ export default function GroupDetailPage() {
         {/* 自分の情報 ＋ クエスト提案 2列 */}
         {myMember && (
         <div className="grid grid-cols-2 gap-4 items-start">
-          <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
-            <h3 className="font-semibold text-gray-800">自分の情報</h3>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500">保有ポイント</span>
-              <span className="text-3xl font-bold text-blue-600">{formatPoint(myMember.memberPoints, group)}</span>
+          <section className="bg-white border border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm hover:shadow-md transition">
+            <h3 className="font-bold text-slate-700 flex items-center gap-2">
+              <span className="w-1.5 h-5 bg-gradient-to-b from-indigo-500 to-violet-600 rounded-full inline-block" />
+              自分の情報
+            </h3>
+            <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-xl p-4 border border-indigo-100">
+              <p className="text-xs font-medium text-slate-500 mb-1">保有ポイント</p>
+              <span className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">{formatPoint(myMember.memberPoints, group)}</span>
             </div>
 
             <div className="border-t border-gray-100 pt-4">
@@ -298,30 +316,32 @@ export default function GroupDetailPage() {
             </div>
           </section>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <Link
               href={`/groups/${id}/quest-proposals`}
-              className="block bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition"
+              className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-800">管理者へのクエスト提案</p>
-                  <p className="text-xs text-gray-400 mt-0.5">メンバーからの提案一覧・審査承認</p>
-                </div>
-                <span className="text-gray-400">→</span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-lg shadow shrink-0">
+                💡
               </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-800 text-sm">管理者へのクエスト提案</p>
+                <p className="text-xs text-slate-400 mt-0.5">メンバーからの提案一覧・審査承認</p>
+              </div>
+              <span className="text-slate-300 text-lg">→</span>
             </Link>
             <Link
               href={`/groups/${id}/quests`}
-              className="block bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition"
+              className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-800">クエスト</p>
-                  <p className="text-xs text-gray-400 mt-0.5">管理側案件・メンバー案件の一覧と発行</p>
-                </div>
-                <span className="text-gray-400">→</span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-lg shadow shrink-0">
+                ⚔️
               </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-800 text-sm">クエスト</p>
+                <p className="text-xs text-slate-400 mt-0.5">管理側案件・メンバー案件の一覧と発行</p>
+              </div>
+              <span className="text-slate-300 text-lg">→</span>
             </Link>
           </div>
         </div>
@@ -362,15 +382,16 @@ export default function GroupDetailPage() {
         {/* メンバー管理ページへのリンク */}
         <Link
           href={`/groups/${id}/members`}
-          className="block bg-white border border-gray-200 rounded-xl px-6 py-4 hover:shadow-md transition"
+          className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-6 py-5 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm"
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-gray-800">メンバー</p>
-              <p className="text-xs text-gray-400 mt-0.5">メンバー一覧・招待・管理</p>
-            </div>
-            <span className="text-gray-400">→</span>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-lg shadow shrink-0">
+            👥
           </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-slate-800">メンバー</p>
+            <p className="text-xs text-slate-400 mt-0.5">メンバー一覧・招待・管理</p>
+          </div>
+          <span className="text-slate-300 text-lg">→</span>
         </Link>
       </main>
     </div>
@@ -445,16 +466,19 @@ function IssuedPointsEditor({
   }
 
   return (
-    <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
+    <section className="bg-white border border-slate-100 rounded-2xl p-6 space-y-5 shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-800">管理側発行済みポイント</h3>
+        <h3 className="font-bold text-slate-700 flex items-center gap-2">
+          <span className="w-1.5 h-5 bg-gradient-to-b from-indigo-500 to-violet-600 rounded-full inline-block" />
+          管理側発行済みポイント
+        </h3>
         {isAdmin && (
           <button
             onClick={() => setSettingsOpen((v) => !v)}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 transition"
+            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition"
           >
             表示設定
-            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${settingsOpen ? "bg-blue-600" : "bg-gray-300"}`}>
+            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${settingsOpen ? "bg-indigo-500" : "bg-slate-200"}`}>
               <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${settingsOpen ? "translate-x-4" : "translate-x-0.5"}`} />
             </span>
           </button>
@@ -463,8 +487,8 @@ function IssuedPointsEditor({
 
       {/* 表示設定パネル */}
       {settingsOpen && (
-        <form onSubmit={saveSettings} className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-          <p className="text-xs font-medium text-gray-600">表示・人件費設定</p>
+        <form onSubmit={saveSettings} className="bg-gradient-to-br from-slate-50 to-indigo-50 border border-indigo-100 rounded-xl p-4 space-y-3">
+          <p className="text-xs font-bold text-slate-600">表示・人件費設定</p>
           <div className="flex flex-wrap gap-4 items-end">
             <div>
               <p className="text-xs text-gray-500 mb-1">表示単位</p>
@@ -519,14 +543,14 @@ function IssuedPointsEditor({
               <button
                 type="submit"
                 disabled={settingsSaving}
-                className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+                className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-xs rounded-lg hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 transition shadow"
               >
                 {settingsSaving ? "保存中..." : "保存"}
               </button>
               <button
                 type="button"
                 onClick={() => setSettingsOpen(false)}
-                className="px-3 py-1.5 text-xs text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                className="px-3 py-1.5 text-xs text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition"
               >
                 キャンセル
               </button>
@@ -542,7 +566,7 @@ function IssuedPointsEditor({
       )}
 
       {/* 現在の状態 */}
-      <div className="flex flex-col sm:flex-row gap-6 items-center">
+      <div className="flex flex-col sm:flex-row gap-6 items-center bg-gradient-to-br from-slate-50 to-indigo-50 rounded-xl p-4 border border-indigo-50">
         {/* 円グラフ */}
         <div className="w-48 h-48 shrink-0">
           <ResponsiveContainer width="100%" height="100%">
@@ -570,28 +594,28 @@ function IssuedPointsEditor({
         </div>
 
         {/* 数値サマリー */}
-        <div className="flex flex-wrap gap-6 text-sm">
-          <div>
-            <p className="text-gray-400 text-xs mb-0.5">発行済み</p>
-            <p className="text-2xl font-bold text-gray-800">{formatPoint(totalIssuedPoints, group)}</p>
+        <div className="flex flex-wrap gap-4 text-sm">
+          <div className="bg-white rounded-xl px-4 py-3 border border-slate-100 shadow-sm min-w-[100px]">
+            <p className="text-slate-400 text-xs mb-1">発行済み</p>
+            <p className="text-xl font-bold text-slate-700">{formatPoint(totalIssuedPoints, group)}</p>
           </div>
-          <div>
-            <p className="text-gray-400 text-xs mb-0.5">流通中</p>
-            <p className="text-2xl font-bold text-blue-600">{formatPoint(totalCirculating, group)}</p>
+          <div className="bg-white rounded-xl px-4 py-3 border border-indigo-100 shadow-sm min-w-[100px]">
+            <p className="text-indigo-400 text-xs mb-1">流通中</p>
+            <p className="text-xl font-bold text-indigo-600">{formatPoint(totalCirculating, group)}</p>
           </div>
-          <div>
-            <p className="text-gray-400 text-xs mb-0.5">未流通（回収可能）</p>
-            <p className="text-2xl font-bold text-green-600">{formatPoint(Math.max(reclaimable, 0), group)}</p>
+          <div className="bg-white rounded-xl px-4 py-3 border border-emerald-100 shadow-sm min-w-[100px]">
+            <p className="text-emerald-400 text-xs mb-1">未流通（回収可能）</p>
+            <p className="text-xl font-bold text-emerald-600">{formatPoint(Math.max(reclaimable, 0), group)}</p>
           </div>
         </div>
       </div>
 
       {isAdmin && (
-        <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
           <DeltaForm
             label="追加発行"
             buttonLabel="発行する"
-            buttonClass="bg-blue-600 hover:bg-blue-700"
+            buttonClass="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 shadow-indigo-200"
             sign={1}
             onSubmit={sendDelta}
             group={group}
@@ -599,7 +623,7 @@ function IssuedPointsEditor({
           <DeltaForm
             label={`回収（最大 ${formatPoint(Math.max(reclaimable, 0), group)}）`}
             buttonLabel="回収する"
-            buttonClass="bg-red-500 hover:bg-red-600"
+            buttonClass="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 shadow-red-200"
             maxPt={reclaimable}
             sign={-1}
             onSubmit={sendDelta}
@@ -684,8 +708,11 @@ function GrantPointsSection({
   }
 
   return (
-    <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
-      <h3 className="font-semibold text-gray-800">ポイント付与</h3>
+    <section className="bg-white border border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm">
+      <h3 className="font-bold text-slate-700 flex items-center gap-2">
+        <span className="w-1.5 h-5 bg-gradient-to-b from-emerald-400 to-teal-500 rounded-full inline-block" />
+        ポイント付与
+      </h3>
 
       <div className="flex gap-4">
         <label className="flex items-center gap-2 cursor-pointer text-sm">
@@ -769,7 +796,7 @@ function GrantPointsSection({
         <button
           type="submit"
           disabled={submitting}
-          className="px-5 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
+          className="px-5 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-sm rounded-lg disabled:opacity-50 transition shadow shadow-emerald-200"
         >
           {submitting ? "付与中..." : "付与する"}
         </button>
@@ -816,7 +843,7 @@ function DeltaForm({
 
   return (
     <div>
-      <p className="text-sm font-medium text-gray-700 mb-2">{label}</p>
+      <p className="text-sm font-semibold text-slate-600 mb-2">{label}</p>
       <form onSubmit={handleSubmit} className="flex gap-2 items-center">
         <input
           type="number"
@@ -826,14 +853,14 @@ function DeltaForm({
           value={amount || ""}
           onChange={(e) => setAmount(Number(e.target.value))}
           placeholder={unitLabel}
-          className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="w-28 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
           required
         />
-        <span className="text-sm text-gray-500">{unitLabel}</span>
+        <span className="text-sm text-slate-400">{unitLabel}</span>
         <button
           type="submit"
           disabled={saving || (maxPt !== undefined && maxPt <= 0)}
-          className={`px-4 py-2 text-white text-sm rounded-lg disabled:opacity-50 transition ${buttonClass}`}
+          className={`px-4 py-2 text-white text-sm rounded-lg disabled:opacity-50 transition shadow ${buttonClass}`}
         >
           {saving ? "..." : buttonLabel}
         </button>
@@ -859,8 +886,11 @@ function GroupSettingsSection({
   onProposalRewardUpdated: (v: number) => void;
 }) {
   return (
-    <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">
-      <h3 className="font-semibold text-gray-800">グループ設定</h3>
+    <section className="bg-white border border-slate-100 rounded-2xl p-6 space-y-5 shadow-sm">
+      <h3 className="font-bold text-slate-700 flex items-center gap-2">
+        <span className="w-1.5 h-5 bg-gradient-to-b from-amber-400 to-orange-500 rounded-full inline-block" />
+        グループ設定
+      </h3>
 
       {/* 提案報酬 */}
       <SettingRow
@@ -910,7 +940,7 @@ function SettingRow({
           {canEdit && !editing && (
             <button
               onClick={() => setEditing(true)}
-              className="text-xs text-gray-400 hover:text-gray-600 transition border border-gray-200 rounded px-2 py-0.5"
+              className="text-xs text-indigo-500 hover:text-indigo-700 transition border border-indigo-200 rounded-lg px-2.5 py-0.5 hover:bg-indigo-50"
             >
               変更
             </button>
@@ -956,24 +986,24 @@ function ProposalRewardForm({
   }
 
   return (
-    <form onSubmit={handleSave} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+    <form onSubmit={handleSave} className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">
       <input
         type="number"
         min={0}
         value={value}
         onChange={(e) => setValue(Number(e.target.value))}
-        className="w-24 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        className="w-24 border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
         required
       />
-      <span className="text-sm text-gray-500">pt</span>
+      <span className="text-sm text-slate-400">pt</span>
       <button
         type="submit"
         disabled={saving}
-        className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+        className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-xs rounded-lg hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 transition"
       >
         {saving ? "保存中..." : "保存"}
       </button>
-      <button type="button" onClick={onCancel} className="text-xs text-gray-400 hover:text-gray-600 transition">
+      <button type="button" onClick={onCancel} className="text-xs text-slate-400 hover:text-slate-600 transition">
         キャンセル
       </button>
       {error && <p className="text-xs text-red-600">{error}</p>}
