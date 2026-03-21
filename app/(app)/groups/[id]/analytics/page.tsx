@@ -111,7 +111,7 @@ export default function GroupAnalyticsPage() {
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-6">
           <ResponsiveContainer width={220} height={220}>
             <PieChart>
-              <Pie data={sortedMembers.map((m, i) => ({ name: m.user.name ?? m.user.email, value: m.memberPoints, color: MEMBER_COLORS[i % MEMBER_COLORS.length] }))} dataKey="value" cx="50%" cy="50%" outerRadius={90} label={false}>
+              <Pie data={sortedMembers.map((m, i) => ({ name: m.user.name ?? m.user.email, value: m.memberPoints, color: MEMBER_COLORS[i % MEMBER_COLORS.length] }))} dataKey="value" cx="50%" cy="50%" outerRadius={90} startAngle={90} endAngle={-270} label={false}>
                 {sortedMembers.map((m, i) => (
                   <Cell key={m.id} fill={MEMBER_COLORS[i % MEMBER_COLORS.length]} />
                 ))}
@@ -138,7 +138,7 @@ export default function GroupAnalyticsPage() {
           <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-6">
             <ResponsiveContainer width={220} height={220}>
               <PieChart>
-                <Pie data={completionRanking.map(({ member, count }, i) => ({ name: member.user.name ?? member.user.email, value: count, color: MEMBER_COLORS[i % MEMBER_COLORS.length] }))} dataKey="value" cx="50%" cy="50%" outerRadius={90} label={false}>
+                <Pie data={completionRanking.map(({ member, count }, i) => ({ name: member.user.name ?? member.user.email, value: count, color: MEMBER_COLORS[i % MEMBER_COLORS.length] }))} dataKey="value" cx="50%" cy="50%" outerRadius={90} startAngle={90} endAngle={-270} label={false}>
                   {completionRanking.map(({ member }, i) => (
                     <Cell key={member.id} fill={MEMBER_COLORS[i % MEMBER_COLORS.length]} />
                   ))}
