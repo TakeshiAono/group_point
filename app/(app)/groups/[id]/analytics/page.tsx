@@ -244,7 +244,7 @@ export default function GroupAnalyticsPage() {
 
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-6">
           {pieData.length === 0 ? (
-            <p className="text-sm text-gray-400 py-8">データがありません</p>
+            <p className="text-sm text-gray-400 py-8 text-center w-full">該当データなし</p>
           ) : (
             <>
               <ResponsiveContainer width={220} height={220}>
