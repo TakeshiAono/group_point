@@ -211,7 +211,7 @@ function MemberRow({
           disabled={removing}
           className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50 transition"
         >
-          {removing ? "..." : "外す"}
+          {removing ? "..." : "削除"}
         </button>
       </div>
     </li>
