@@ -219,6 +219,19 @@ export default function GroupDetailPage() {
           </div>
         </section>
 
+        {/* 管理側発行済みポイント管理（ADMIN/LEADERのみ） */}
+        {group.totalIssuedPoints !== undefined && (
+          <IssuedPointsEditor
+            groupId={id}
+            totalIssuedPoints={group.totalIssuedPoints}
+            totalCirculating={totalCirculating}
+            isAdmin={myRole === "ADMIN"}
+            group={group}
+            onUpdated={(v) => setGroup((prev) => prev ? { ...prev, totalIssuedPoints: v } : prev)}
+            onSettingsUpdated={(settings) => setGroup((prev) => prev ? { ...prev, ...settings } : prev)}
+          />
+        )}
+
         {/* 自分の情報 ＋ クエスト提案 2列 */}
         {myMember && (
         <div className="grid grid-cols-2 gap-4 items-start">
@@ -333,19 +346,6 @@ export default function GroupDetailPage() {
             canEdit={myRole === "ADMIN" || myRole === "LEADER"}
             proposalReward={group.proposalReward}
             onProposalRewardUpdated={(v) => setGroup((prev) => prev ? { ...prev, proposalReward: v } : prev)}
-          />
-        )}
-
-        {/* 管理側発行済みポイント管理（ADMIN/LEADERのみ） */}
-        {group.totalIssuedPoints !== undefined && (
-          <IssuedPointsEditor
-            groupId={id}
-            totalIssuedPoints={group.totalIssuedPoints}
-            totalCirculating={totalCirculating}
-            isAdmin={myRole === "ADMIN"}
-            group={group}
-            onUpdated={(v) => setGroup((prev) => prev ? { ...prev, totalIssuedPoints: v } : prev)}
-            onSettingsUpdated={(settings) => setGroup((prev) => prev ? { ...prev, ...settings } : prev)}
           />
         )}
 
