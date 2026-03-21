@@ -64,7 +64,9 @@ export default function SubQuestDetailPage() {
 
   // 報酬変更提案フォーム
   const [proposing, setProposing] = useState(false);
+  const [proposeMode, setProposeMode] = useState<"pt" | "percent">("pt");
   const [proposedReward, setProposedReward] = useState(0);
+  const [proposedPercent, setProposedPercent] = useState(0);
   const [proposeError, setProposeError] = useState("");
   const [proposing2, setProposing2] = useState(false);
 
@@ -142,13 +144,16 @@ export default function SubQuestDetailPage() {
     e.preventDefault();
     setProposeError("");
     setProposing2(true);
+    const resolvedPt = proposeMode === "percent"
+      ? Math.round((subQuest!.quest.pointReward * proposedPercent) / 100)
+      : proposedReward;
     try {
       const res = await fetch(
         `/api/groups/${groupId}/quests/${questId}/subquests/${subQuestId}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pendingPointReward: proposedReward }),
+          body: JSON.stringify({ pendingPointReward: resolvedPt }),
         }
       );
       let data: { error?: string } & Record<string, unknown> = {};
@@ -391,17 +396,48 @@ export default function SubQuestDetailPage() {
               <form onSubmit={handlePropose} className="space-y-3">
                 <p className="text-sm font-medium text-gray-700">報酬変更の提案</p>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">
-                    新しい報酬（最大 {subQuest.quest.pointReward} pt）
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={subQuest.quest.pointReward}
-                    value={proposedReward}
-                    onChange={(e) => setProposedReward(Number(e.target.value))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs text-gray-500">
+                      新しい報酬（最大 {subQuest.quest.pointReward} pt）
+                    </label>
+                    <div className="flex gap-2">
+                      {(["pt", "percent"] as const).map((m) => (
+                        <label key={m} className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
+                          <input
+                            type="radio"
+                            checked={proposeMode === m}
+                            onChange={() => { setProposeMode(m); setProposedReward(subQuest.pointReward); setProposedPercent(0); }}
+                          />
+                          {m === "pt" ? "pt" : "%"}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  {proposeMode === "pt" ? (
+                    <input
+                      type="number"
+                      min={0}
+                      max={subQuest.quest.pointReward}
+                      value={proposedReward}
+                      onChange={(e) => setProposedReward(Number(e.target.value))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={proposedPercent}
+                        onChange={(e) => setProposedPercent(Number(e.target.value))}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                      <span className="text-sm text-gray-500 shrink-0">%</span>
+                      <span className="text-xs text-gray-400 shrink-0">
+                        = {Math.round((subQuest.quest.pointReward * proposedPercent) / 100)} pt
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {proposeError && <p className="text-xs text-red-600">{proposeError}</p>}
                 <div className="flex gap-2">

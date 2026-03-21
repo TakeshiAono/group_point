@@ -325,16 +325,21 @@ function AddSubQuestForm({
   const [title, setTitle] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [rewardMode, setRewardMode] = useState<"pt" | "percent">("pt");
   const [pointReward, setPointReward] = useState(0);
+  const [percent, setPercent] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const remaining = questPointReward - usedPointReward;
+  const maxPercent = questPointReward > 0 ? Math.floor((remaining / questPointReward) * 100) : 0;
+  const ptFromPercent = Math.round((questPointReward * percent) / 100);
+  const resolvedPt = rewardMode === "percent" ? ptFromPercent : pointReward;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (pointReward > remaining) {
+    if (resolvedPt > remaining) {
       setError(`報酬が残り上限（${remaining} pt）を超えています`);
       return;
     }
@@ -347,7 +352,7 @@ function AddSubQuestForm({
           title,
           assigneeId: assigneeId || undefined,
           deadline: deadline || undefined,
-          pointReward,
+          pointReward: resolvedPt,
         }),
       });
       const data = await res.json();
@@ -360,6 +365,7 @@ function AddSubQuestForm({
       setAssigneeId("");
       setDeadline("");
       setPointReward(0);
+      setPercent(0);
     } finally {
       setSubmitting(false);
     }
@@ -389,17 +395,46 @@ function AddSubQuestForm({
         ))}
       </select>
       <div>
-        <label className="block text-xs text-gray-500 mb-1">
-          報酬（最大 {remaining} pt）
-        </label>
-        <input
-          type="number"
-          min={0}
-          max={remaining}
-          value={pointReward}
-          onChange={(e) => setPointReward(Number(e.target.value))}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs text-gray-500">
+            報酬（残り {remaining} pt）
+          </label>
+          <div className="flex gap-2">
+            {(["pt", "percent"] as const).map((m) => (
+              <label key={m} className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={rewardMode === m}
+                  onChange={() => { setRewardMode(m); setPointReward(0); setPercent(0); }}
+                />
+                {m === "pt" ? "pt" : "%"}
+              </label>
+            ))}
+          </div>
+        </div>
+        {rewardMode === "pt" ? (
+          <input
+            type="number"
+            min={0}
+            max={remaining}
+            value={pointReward}
+            onChange={(e) => setPointReward(Number(e.target.value))}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              max={maxPercent}
+              value={percent}
+              onChange={(e) => setPercent(Number(e.target.value))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <span className="text-sm text-gray-500 shrink-0">%</span>
+            <span className="text-xs text-gray-400 shrink-0">= {ptFromPercent} pt</span>
+          </div>
+        )}
       </div>
       <div>
         <label className="block text-xs text-gray-500 mb-1">デッドライン（任意）</label>
