@@ -632,7 +632,7 @@ function QuestLogSection({ groupId, questId }: { groupId: string; questId: strin
   }, [groupId, questId]);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col" style={{ maxHeight: "80vh" }}>
+    <div className="bg-white border border-gray-200 rounded-xl p-5 flex flex-col" style={{ height: "60vh" }}>
       <h3 className="font-semibold text-gray-800 mb-3 shrink-0">アクティビティログ</h3>
       {logs.length === 0 ? (
         <p className="text-sm text-gray-400">まだ記録がありません</p>
