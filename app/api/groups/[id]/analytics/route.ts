@@ -6,6 +6,19 @@ function toMonth(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function toWeek(date: Date): string {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const jan4 = new Date(d.getFullYear(), 0, 4);
+  const weekNum = 1 + Math.round(((d.getTime() - jan4.getTime()) / 86400000 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+  return `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+}
+
+function toBucket(date: Date, granularity: "month" | "week"): string {
+  return granularity === "week" ? toWeek(date) : toMonth(date);
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -22,6 +35,7 @@ export async function GET(
   const questTypeFilter = questTypesParam
     ? (questTypesParam.split(",") as ("GOVERNMENT" | "MEMBER")[])
     : (["GOVERNMENT", "MEMBER"] as ("GOVERNMENT" | "MEMBER")[]);
+  const granularity = (url.searchParams.get("granularity") ?? "month") as "month" | "week";
 
   const member = await prisma.groupMember.findUnique({
     where: { userId_groupId: { userId: session.user.id, groupId } },
@@ -61,13 +75,13 @@ export async function GET(
   // ────────────────────────────────────────────────────────────
   const questMonthMap: Record<string, { govCreated: number; memberCreated: number; completed: number }> = {};
   for (const q of quests) {
-    const m = toMonth(q.createdAt);
+    const m = toBucket(q.createdAt, granularity);
     if (!questMonthMap[m]) questMonthMap[m] = { govCreated: 0, memberCreated: 0, completed: 0 };
     if (q.questType === "GOVERNMENT") questMonthMap[m].govCreated++;
     else questMonthMap[m].memberCreated++;
   }
   for (const log of completeLogs) {
-    const m = toMonth(log.createdAt);
+    const m = toBucket(log.createdAt, granularity);
     if (!questMonthMap[m]) questMonthMap[m] = { govCreated: 0, memberCreated: 0, completed: 0 };
     questMonthMap[m].completed++;
   }
@@ -80,7 +94,7 @@ export async function GET(
   // ────────────────────────────────────────────────────────────
   const propMonthMap: Record<string, { created: number; approved: number; rejected: number }> = {};
   for (const p of proposals) {
-    const m = toMonth(p.createdAt);
+    const m = toBucket(p.createdAt, granularity);
     if (!propMonthMap[m]) propMonthMap[m] = { created: 0, approved: 0, rejected: 0 };
     propMonthMap[m].created++;
     if (p.status === "APPROVED") propMonthMap[m].approved++;
@@ -115,7 +129,7 @@ export async function GET(
   // 月ごとの差分を集計し、現在残高から逆算
   const memberMonthDelta: Record<string, Record<string, number>> = {};
   for (const evt of events) {
-    const m = toMonth(evt.date);
+    const m = toBucket(evt.date, granularity);
     if (!memberMonthDelta[evt.memberId]) memberMonthDelta[evt.memberId] = {};
     memberMonthDelta[evt.memberId][m] = (memberMonthDelta[evt.memberId][m] ?? 0) + evt.delta;
   }
@@ -149,7 +163,7 @@ export async function GET(
   for (const log of completeLogs) {
     const quest = quests.find((q) => q.id === log.questId);
     if (!quest?.completerId) continue;
-    const m = toMonth(log.createdAt);
+    const m = toBucket(log.createdAt, granularity);
     if (!memberCompletionMonthCount[quest.completerId]) memberCompletionMonthCount[quest.completerId] = {};
     memberCompletionMonthCount[quest.completerId][m] = (memberCompletionMonthCount[quest.completerId][m] ?? 0) + 1;
   }
@@ -168,7 +182,7 @@ export async function GET(
   // ────────────────────────────────────────────────────────────
   const memberProposalMonthCount: Record<string, Record<string, number>> = {};
   for (const p of proposals) {
-    const m = toMonth(p.createdAt);
+    const m = toBucket(p.createdAt, granularity);
     if (!memberProposalMonthCount[p.proposerId]) memberProposalMonthCount[p.proposerId] = {};
     memberProposalMonthCount[p.proposerId][m] = (memberProposalMonthCount[p.proposerId][m] ?? 0) + 1;
   }

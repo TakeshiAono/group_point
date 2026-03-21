@@ -40,6 +40,7 @@ type AnalyticsData = {
 };
 
 type TopPieMode = "points" | "proposals";
+type Granularity = "month" | "week";
 
 // ─── 定数 ───────────────────────────────────────────────────
 const MEMBER_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"];
@@ -58,11 +59,11 @@ export default function GroupAnalyticsPage() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
-      return JSON.parse(raw) as { topPieMode: TopPieMode; selectedMonth: string; questTypes: ("GOVERNMENT" | "MEMBER")[] };
+      return JSON.parse(raw) as { topPieMode: TopPieMode; selectedMonth: string; questTypes: ("GOVERNMENT" | "MEMBER")[]; granularity: Granularity };
     } catch { return null; }
   }
 
-  function saveStorage(data: { topPieMode: TopPieMode; selectedMonth: string; questTypes: ("GOVERNMENT" | "MEMBER")[] }) {
+  function saveStorage(data: { topPieMode: TopPieMode; selectedMonth: string; questTypes: ("GOVERNMENT" | "MEMBER")[]; granularity: Granularity }) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* ignore */ }
   }
 
@@ -73,6 +74,7 @@ export default function GroupAnalyticsPage() {
   const [questTypeFilter, setQuestTypeFilter] = useState<Set<"GOVERNMENT" | "MEMBER">>(
     new Set(saved?.questTypes ?? ["GOVERNMENT", "MEMBER"])
   );
+  const [granularity, setGranularity] = useState<Granularity>(saved?.granularity ?? "month");
 
   function toggleQuestType(type: "GOVERNMENT" | "MEMBER") {
     setQuestTypeFilter((prev) => {
@@ -88,14 +90,14 @@ export default function GroupAnalyticsPage() {
   }
 
   useEffect(() => {
-    saveStorage({ topPieMode, selectedMonth, questTypes: Array.from(questTypeFilter) });
+    saveStorage({ topPieMode, selectedMonth, questTypes: Array.from(questTypeFilter), granularity });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [topPieMode, selectedMonth, questTypeFilter]);
+  }, [topPieMode, selectedMonth, questTypeFilter, granularity]);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/groups").then((r) => r.ok ? r.json() : []),
-      fetch(`/api/groups/${groupId}/analytics?questTypes=GOVERNMENT,MEMBER`).then((r) => r.ok ? r.json() : null),
+      fetch(`/api/groups/${groupId}/analytics?questTypes=GOVERNMENT,MEMBER&granularity=${granularity}`).then((r) => r.ok ? r.json() : null),
     ]).then(([groups, analyticsData]) => {
       if (Array.isArray(groups)) {
         const g = groups.find((x: Group) => x.id === groupId);
@@ -110,16 +112,16 @@ export default function GroupAnalyticsPage() {
         setSelectedMonth((prev) => (prev === "current" ? (months[months.length - 1] ?? "current") : prev));
       }
     }).finally(() => setLoading(false));
-  }, [groupId]);
+  }, [groupId, granularity]);
 
   useEffect(() => {
     const questTypes = Array.from(questTypeFilter).join(",");
-    fetch(`/api/groups/${groupId}/analytics?questTypes=${questTypes}`)
+    fetch(`/api/groups/${groupId}/analytics?questTypes=${questTypes}&granularity=${granularity}`)
       .then((r) => r.ok ? r.json() : null)
       .then((analyticsData) => {
         if (analyticsData) setFilteredAnalytics(analyticsData);
       });
-  }, [groupId, questTypeFilter]);
+  }, [groupId, questTypeFilter, granularity]);
 
   if (loading) return <div className="p-10 text-gray-500">読み込み中...</div>;
   if (!group) return <div className="p-10 text-red-500">グループが見つかりません</div>;
@@ -250,6 +252,24 @@ export default function GroupAnalyticsPage() {
         lineMembers={topLineMembers}
         formatLineTooltip={(v) => topPieMode === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
       />
+
+      {/* 時系列粒度 */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500">折れ線グラフ単位</span>
+        {(["month", "week"] as const).map((g) => (
+          <button
+            key={g}
+            onClick={() => { setGranularity(g); setSelectedMonth("current"); }}
+            className={`px-3 py-1 text-xs rounded-full border transition ${
+              granularity === g
+                ? "bg-blue-600 text-white border-blue-600"
+                : "text-gray-600 border-gray-300 hover:border-blue-400"
+            }`}
+          >
+            {g === "month" ? "月単位" : "週単位"}
+          </button>
+        ))}
+      </div>
 
       {/* クエスト種別フィルター */}
       <div className="flex items-center gap-4 bg-white border border-blue-100 rounded-xl px-5 py-3">
