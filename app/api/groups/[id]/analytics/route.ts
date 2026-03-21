@@ -7,7 +7,7 @@ function toMonth(date: Date): string {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
@@ -17,6 +17,12 @@ export async function GET(
 
   const { id: groupId } = await params;
 
+  const url = new URL(req.url);
+  const questTypesParam = url.searchParams.get("questTypes");
+  const questTypeFilter = questTypesParam
+    ? (questTypesParam.split(",") as ("GOVERNMENT" | "MEMBER")[])
+    : (["GOVERNMENT", "MEMBER"] as ("GOVERNMENT" | "MEMBER")[]);
+
   const member = await prisma.groupMember.findUnique({
     where: { userId_groupId: { userId: session.user.id, groupId } },
   });
@@ -24,7 +30,7 @@ export async function GET(
 
   // ── クエスト一覧（作成日・完了情報付き） ─────────────────
   const quests = await prisma.quest.findMany({
-    where: { groupId },
+    where: { groupId, questType: { in: questTypeFilter } },
     include: {
       completer: { include: { user: { select: { id: true, name: true, email: true } } } },
       creator:   { include: { user: { select: { id: true, name: true, email: true } } } },

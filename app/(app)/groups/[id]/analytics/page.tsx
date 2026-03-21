@@ -112,36 +112,40 @@ export default function GroupAnalyticsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pieMode, selectedMonth, questTypeFilter]);
 
+  // グループ・クエスト一覧は初回のみ
   useEffect(() => {
     Promise.all([
       fetch("/api/groups").then((r) => r.ok ? r.json() : []),
       fetch(`/api/groups/${groupId}/quests`).then((r) => r.ok ? r.json() : []),
-      fetch(`/api/groups/${groupId}/analytics`).then((r) => r.ok ? r.json() : null),
-    ]).then(([groups, questData, analyticsData]) => {
+    ]).then(([groups, questData]) => {
       if (Array.isArray(groups)) {
         const g = groups.find((x: Group) => x.id === groupId);
         if (g) setGroup(g);
       }
       if (Array.isArray(questData)) setQuests(questData);
-      if (analyticsData) {
+    }).finally(() => setLoading(false));
+  }, [groupId]);
+
+  // analytics はフィルター変更のたびに再フェッチ
+  useEffect(() => {
+    const questTypes = Array.from(questTypeFilter).join(",");
+    fetch(`/api/groups/${groupId}/analytics?questTypes=${questTypes}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((analyticsData) => {
+        if (!analyticsData) return;
         setAnalytics(analyticsData);
-        // "current" のままなら最新月にセット
         const months = Array.from(new Set([
           ...analyticsData.questTimeseries.map((x: { month: string }) => x.month),
           ...analyticsData.proposalTimeseries.map((x: { month: string }) => x.month),
         ])).sort() as string[];
         setSelectedMonth((prev) => (prev === "current" ? (months[months.length - 1] ?? "current") : prev));
-      }
-    }).finally(() => setLoading(false));
-  }, [groupId]);
+      });
+  }, [groupId, questTypeFilter]);
 
   if (loading) return <div className="p-10 text-gray-500">読み込み中...</div>;
   if (!group) return <div className="p-10 text-red-500">グループが見つかりません</div>;
 
   const pg: PointGroup = { pointUnit: group.pointUnit, laborCostPerHour: group.laborCostPerHour, timeUnit: group.timeUnit };
-
-  // ── クエストフィルター ─────────────────────────────────────
-  const filteredQuests = quests.filter((q) => questTypeFilter.has(q.questType));
 
   // ── 全月一覧 ───────────────────────────────────────────────
   const allMonths = Array.from(new Set([
