@@ -175,6 +175,14 @@ export default function GroupAnalyticsPage() {
   type PieEntry = { id: string; name: string; value: number; label: string };
   type LineRow = Record<string, string | number>;
 
+  function selfName(memberId: string, name: string): string {
+    return memberId === myMemberId ? "自分" : name;
+  }
+
+  function renameSelf<T>(list: MemberHistory<T>[]): MemberHistory<T>[] {
+    return list.map((m) => ({ ...m, name: selfName(m.memberId, m.name) }));
+  }
+
   function buildLineRows<T extends { month: string }>(
     histories: MemberHistory<T>[],
     getValue: (h: T) => number
@@ -202,24 +210,26 @@ export default function GroupAnalyticsPage() {
       topPieData = basePieAnalytics.memberPointHistory
         .map((mp) => {
           const found = mp.history.find((h) => h.month === topBucket);
-          return { id: mp.memberId, name: mp.name, value: found?.balance ?? 0, label: formatPoint(found?.balance ?? 0, pg) };
+          return { id: mp.memberId, name: selfName(mp.memberId, mp.name), value: found?.balance ?? 0, label: formatPoint(found?.balance ?? 0, pg) };
         }).sort((a, b) => b.value - a.value);
     } else {
       topPieData = basePieAnalytics.memberProposalHistory
         .map((mp) => {
           const found = mp.history.find((h) => h.month === topBucket);
-          return { id: mp.memberId, name: mp.name, value: found?.count ?? 0, label: `${found?.count ?? 0} 件` };
+          return { id: mp.memberId, name: selfName(mp.memberId, mp.name), value: found?.count ?? 0, label: `${found?.count ?? 0} 件` };
         }).filter((e) => e.value > 0).sort((a, b) => b.value - a.value);
     }
   }
 
+  const topLineMembers = topLineAnalytics
+    ? topPieMode === "points"
+      ? renameSelf(topLineAnalytics.memberPointHistory)
+      : renameSelf(topLineAnalytics.memberProposalHistory)
+    : [];
   const topLineRows = topLineAnalytics
     ? topPieMode === "points"
-      ? buildLineRows(topLineAnalytics.memberPointHistory, (h) => (h as { month: string; balance: number }).balance)
-      : buildLineRows(topLineAnalytics.memberProposalHistory, (h) => (h as { month: string; count: number }).count)
-    : [];
-  const topLineMembers = topLineAnalytics
-    ? (topPieMode === "points" ? topLineAnalytics.memberPointHistory : topLineAnalytics.memberProposalHistory)
+      ? buildLineRows(renameSelf(topLineAnalytics.memberPointHistory), (h) => h.balance)
+      : buildLineRows(renameSelf(topLineAnalytics.memberProposalHistory), (h) => h.count)
     : [];
 
   // ── 下部データ（円グラフ：filteredPieAnalytics、折れ線：bottomLineAnalytics） ──
@@ -233,14 +243,16 @@ export default function GroupAnalyticsPage() {
     completionPieData = filteredPieAnalytics.memberCompletionHistory
       .map((mp) => {
         const found = mp.history.find((h) => h.month === bottomBucket);
-        return { id: mp.memberId, name: mp.name, value: found?.count ?? 0, label: `${found?.count ?? 0} 件` };
+        return { id: mp.memberId, name: selfName(mp.memberId, mp.name), value: found?.count ?? 0, label: `${found?.count ?? 0} 件` };
       }).filter((e) => e.value > 0).sort((a, b) => b.value - a.value);
   }
 
-  const completionLineRows = bottomLineAnalytics
-    ? buildLineRows(bottomLineAnalytics.memberCompletionHistory, (h) => (h as { month: string; count: number }).count)
+  const completionLineMembers = bottomLineAnalytics
+    ? renameSelf(bottomLineAnalytics.memberCompletionHistory)
     : [];
-  const completionLineMembers = bottomLineAnalytics?.memberCompletionHistory ?? [];
+  const completionLineRows = bottomLineAnalytics
+    ? buildLineRows(renameSelf(bottomLineAnalytics.memberCompletionHistory), (h) => h.count)
+    : [];
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
@@ -388,7 +400,7 @@ function AnalysisSection({
                   <li key={entry.id} className={`flex items-center gap-2 text-sm ${isMe ? "font-bold" : ""}`}>
                     <span className="inline-block w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
                     <span className={`flex-1 truncate ${isMe ? "text-gray-900" : "text-gray-700"}`}>
-                      {entry.name}{isMe && " 👤"}
+                      {entry.name}
                     </span>
                     <span className="font-bold shrink-0" style={{ color: MEMBER_COLORS[i % MEMBER_COLORS.length] }}>{entry.label}</span>
                   </li>
