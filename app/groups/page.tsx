@@ -25,7 +25,9 @@ export default function GroupsPage() {
   useEffect(() => {
     fetch("/api/groups")
       .then((r) => r.json())
-      .then(setGroups);
+      .then((data) => {
+        if (Array.isArray(data)) setGroups(data);
+      });
   }, []);
 
   async function handleCreate(e: React.FormEvent) {

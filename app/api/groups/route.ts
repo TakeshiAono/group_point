@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 // グループ一覧取得
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session?.user) {
     return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
   }
 
@@ -25,7 +25,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    return NextResponse.json({ error: "認証が必要です（再ログインしてください）" }, { status: 401 });
   }
 
   const { name } = await req.json();

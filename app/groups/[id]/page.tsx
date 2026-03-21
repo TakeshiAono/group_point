@@ -30,9 +30,11 @@ export default function GroupDetailPage() {
   useEffect(() => {
     fetch(`/api/groups`)
       .then((r) => r.json())
-      .then((groups: Group[]) => {
-        const found = groups.find((g) => g.id === id);
-        setGroup(found ?? null);
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          const found = data.find((g: Group) => g.id === id);
+          setGroup(found ?? null);
+        }
       });
   }, [id]);
 
