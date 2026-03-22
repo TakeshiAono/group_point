@@ -281,8 +281,17 @@ function CsvInviteSection({ groupId, role: defaultRole, availableRoles }: { grou
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  function updateRole(index: number, role: "LEADER" | "MEMBER") {
-    setPreview((prev) => prev.map((e, i) => i === index ? { ...e, role } : e));
+  function toggleLeader(index: number) {
+    setPreview((prev) => {
+      const updated = prev.map((e, i) =>
+        i === index ? { ...e, role: (e.role === "LEADER" ? "MEMBER" : "LEADER") as "LEADER" | "MEMBER" } : e
+      );
+      // 管理側を上、メンバーを下に並び替え
+      return [
+        ...updated.filter((e) => e.role === "LEADER"),
+        ...updated.filter((e) => e.role === "MEMBER"),
+      ];
+    });
   }
 
   function removeEntry(index: number) {
@@ -349,19 +358,18 @@ function CsvInviteSection({ groupId, role: defaultRole, availableRoles }: { grou
               <p className="text-xs font-medium text-gray-600">{preview.length}件 — ロールを確認して送信してください</p>
               <ul className="max-h-52 overflow-y-auto space-y-1.5">
                 {preview.map((entry, i) => (
-                  <li key={i} className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-1.5">
+                  <li key={entry.email} className={`flex items-center gap-2 rounded-lg px-3 py-1.5 transition-colors ${entry.role === "LEADER" ? "bg-indigo-50" : "bg-slate-50"}`}>
                     <span className="text-xs text-gray-700 flex-1 truncate">{entry.email}</span>
-                    {availableRoles.length > 1 ? (
-                      <select
-                        value={entry.role}
-                        onChange={(e) => updateRole(i, e.target.value as "LEADER" | "MEMBER")}
-                        className="text-xs border border-gray-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                      >
-                        <option value="MEMBER">メンバー</option>
-                        <option value="LEADER">管理側</option>
-                      </select>
-                    ) : (
-                      <span className="text-xs text-gray-400">{entry.role === "LEADER" ? "管理側" : "メンバー"}</span>
+                    {availableRoles.includes("LEADER") && (
+                      <label className="flex items-center gap-1 text-xs text-indigo-600 cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={entry.role === "LEADER"}
+                          onChange={() => toggleLeader(i)}
+                          className="accent-indigo-600"
+                        />
+                        管理側
+                      </label>
                     )}
                     <button
                       type="button"
