@@ -22,24 +22,28 @@ const STEP_CONFIG: Partial<Record<NonNullable<OnboardingStep>, StepConfig>> = {
     title: "プロフィールを設定しましょう",
     description: "名前を入力して「保存する」ボタンをクリックしてください。",
     isAction: true,
+    navigatePath: () => "/profile",
   },
   "create-group": {
     emoji: "🏠",
     title: "グループを作成しましょう",
     description: "左サイドバー上部の「グループを作成」ボタンをクリックしてください。",
     isAction: true,
+    navigatePath: () => "/groups",
   },
   "issue-points": {
     emoji: "💰",
     title: "ポイントを発行しましょう",
     description: "管理者はグループポイントを発行できます。「発行する」ボタンをクリックしてください。",
     isAction: true,
+    navigatePath: (gid) => gid ? `/groups/${gid}` : null,
   },
   "create-quest": {
     emoji: "📋",
     title: "クエストを作成しましょう",
     description: "クエストはメンバーへの依頼です。「クエストを作成」ボタンをクリックして作成してください。",
     isAction: true,
+    navigatePath: (gid) => gid ? `/groups/${gid}/quests` : null,
   },
   "quest-proposals": {
     emoji: "💡",
