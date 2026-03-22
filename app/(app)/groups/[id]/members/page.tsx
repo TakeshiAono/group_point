@@ -132,22 +132,11 @@ export default function MembersPage() {
             </h3>
             <ul className="space-y-1.5">
               {pendingInvitations.map((inv) => (
-                <li key={inv.id} className="bg-white border border-amber-100 rounded-lg px-4 py-2.5 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">
-                      {inv.invitee?.name ?? inv.inviteeEmail}
-                    </p>
-                    {inv.invitee?.name && (
-                      <p className="text-xs text-gray-400 truncate">{inv.inviteeEmail}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_BADGE[inv.role]}`}>
-                      {ROLE_LABEL[inv.role]}
-                    </span>
-                    <span className="text-xs text-amber-500 font-medium">招待中</span>
-                  </div>
-                </li>
+                <PendingInvitationRow
+                  key={inv.id}
+                  invitation={inv}
+                  onCancelled={(id) => setPendingInvitations((prev) => prev.filter((i) => i.id !== id))}
+                />
               ))}
             </ul>
           </section>
@@ -172,6 +161,53 @@ export default function MembersPage() {
         )}
       </main>
     </div>
+  );
+}
+
+function PendingInvitationRow({
+  invitation,
+  onCancelled,
+}: {
+  invitation: PendingInvitation;
+  onCancelled: (id: string) => void;
+}) {
+  const [cancelling, setCancelling] = useState(false);
+
+  async function handleCancel() {
+    if (!confirm(`${invitation.inviteeEmail} への招待を取り消しますか？`)) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/invitations/${invitation.id}`, { method: "DELETE" });
+      if (res.ok) onCancelled(invitation.id);
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  return (
+    <li className="bg-white border border-amber-100 rounded-lg px-4 py-2.5 flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-gray-800 truncate">
+          {invitation.invitee?.name ?? invitation.inviteeEmail}
+        </p>
+        {invitation.invitee?.name && (
+          <p className="text-xs text-gray-400 truncate">{invitation.inviteeEmail}</p>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_BADGE[invitation.role]}`}>
+          {ROLE_LABEL[invitation.role]}
+        </span>
+        <span className="text-xs text-amber-500 font-medium">招待中</span>
+        <button
+          onClick={handleCancel}
+          disabled={cancelling}
+          className="text-xs text-red-400 hover:text-red-600 disabled:opacity-50 transition border border-red-200 rounded px-2 py-0.5 hover:bg-red-50"
+        >
+          {cancelling ? "..." : "取り消し"}
+        </button>
+      </div>
+    </li>
   );
 }
 
