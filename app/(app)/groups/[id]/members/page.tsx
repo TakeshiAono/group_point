@@ -355,32 +355,45 @@ function CsvInviteSection({ groupId, role: defaultRole, availableRoles }: { grou
           {/* プレビューリスト */}
           {preview.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-600">{preview.length}件 — ロールを確認して送信してください</p>
-              <ul className="max-h-52 overflow-y-auto space-y-1.5">
-                {preview.map((entry, i) => (
-                  <li key={entry.email} className={`flex items-center gap-2 rounded-lg px-3 py-1.5 transition-colors ${entry.role === "LEADER" ? "bg-indigo-50" : "bg-slate-50"}`}>
-                    <span className="text-xs text-gray-700 flex-1 truncate">{entry.email}</span>
-                    {availableRoles.includes("LEADER") && (
-                      <label className="flex items-center gap-1 text-xs text-indigo-600 cursor-pointer shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={entry.role === "LEADER"}
-                          onChange={() => toggleLeader(i)}
-                          className="accent-indigo-600"
-                        />
-                        管理側
-                      </label>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => removeEntry(i)}
-                      className="text-gray-300 hover:text-red-400 transition text-xs shrink-0"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <div className="max-h-52 overflow-y-auto border border-gray-100 rounded-lg">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-slate-100">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium text-gray-600">メールアドレス</th>
+                      {availableRoles.includes("LEADER") && (
+                        <th className="px-3 py-2 font-medium text-indigo-600 whitespace-nowrap">管理側として招待</th>
+                      )}
+                      <th className="px-2 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {preview.map((entry, i) => (
+                      <tr key={entry.email} className={`transition-colors ${entry.role === "LEADER" ? "bg-indigo-50" : "bg-white"}`}>
+                        <td className="px-3 py-2 text-gray-700 truncate max-w-[200px]">{entry.email}</td>
+                        {availableRoles.includes("LEADER") && (
+                          <td className="px-3 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={entry.role === "LEADER"}
+                              onChange={() => toggleLeader(i)}
+                              className="accent-indigo-600 w-4 h-4 cursor-pointer"
+                            />
+                          </td>
+                        )}
+                        <td className="px-2 py-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeEntry(i)}
+                            className="text-gray-300 hover:text-red-400 transition"
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <button
                 type="button"
                 onClick={handleSend}
