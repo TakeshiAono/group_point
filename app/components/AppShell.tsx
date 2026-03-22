@@ -4,14 +4,21 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "./Sidebar";
 import UserAvatar from "./UserAvatar";
+import OnboardingWizard from "./OnboardingWizard";
 import { logout } from "@/app/actions/auth";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [me, setMe] = useState<{ id: string; name: string | null } | null>(null);
+  const [me, setMe] = useState<{ id: string; name: string | null; onboardingCompleted: boolean } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    fetch("/api/me").then((r) => r.ok ? r.json() : null).then(setMe);
+    fetch("/api/me").then((r) => r.ok ? r.json() : null).then((data) => {
+      setMe(data);
+      if (data && !data.onboardingCompleted) {
+        setShowOnboarding(true);
+      }
+    });
   }, []);
 
   return (
@@ -77,6 +84,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* オンボーディングウィザード */}
+      {showOnboarding && me && (
+        <OnboardingWizard
+          userName={me.name}
+          onComplete={() => setShowOnboarding(false)}
+        />
+      )}
     </div>
   );
 }
