@@ -80,7 +80,8 @@ export function OnboardingProvider({
   const markComplete = useCallback(async () => {
     await fetch("/api/me/onboarding", { method: "POST" });
     setStep(null);
-  }, []);
+    router.push("/");
+  }, [router]);
 
   const start = useCallback(() => {
     setStep("profile");
