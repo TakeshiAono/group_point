@@ -3,6 +3,36 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { sendInvitationEmail } from "@/lib/emails/invitation";
 
+// PENDING招待一覧を取得（ADMIN/LEADERのみ）
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+  }
+  const { id: groupId } = await params;
+  const member = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: session.user.id, groupId } },
+  });
+  if (!member || member.role === "MEMBER") {
+    return NextResponse.json({ error: "権限がありません" }, { status: 403 });
+  }
+  const invitations = await prisma.invitation.findMany({
+    where: { groupId, status: "PENDING" },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      inviteeEmail: true,
+      role: true,
+      createdAt: true,
+      invitee: { select: { name: true } },
+    },
+  });
+  return NextResponse.json(invitations);
+}
+
 // グループへの招待を送る
 // ADMIN: LEADER・MEMBERを招待可能
 // LEADER: MEMBERのみ招待可能

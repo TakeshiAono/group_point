@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import UserAvatar from "@/app/components/UserAvatar";
 import { useOnboarding } from "@/lib/onboarding-context";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
+
+type PendingInvitation = {
+  id: string;
+  inviteeEmail: string;
+  role: "LEADER" | "MEMBER";
+  createdAt: string;
+  invitee: { name: string | null } | null;
+};
 
 type Member = {
   id: string;
@@ -54,6 +62,7 @@ export default function MembersPage() {
   const { id: groupId } = useParams<{ id: string }>();
   const [group, setGroup] = useState<Group | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,6 +74,13 @@ export default function MembersPage() {
       if (Array.isArray(groups)) {
         const found = groups.find((g: Group) => g.id === groupId);
         setGroup(found ?? null);
+        // ADMIN/LEADERなら承認待ち招待を取得
+        const myMember = found?.members.find((m: Member) => m.user.id === me?.id);
+        if (myMember && myMember.role !== "MEMBER") {
+          fetch(`/api/groups/${groupId}/invitations`)
+            .then((r) => r.ok ? r.json() : [])
+            .then((data) => setPendingInvitations(Array.isArray(data) ? data : []));
+        }
       }
     }).finally(() => setLoading(false));
   }, [groupId]);
@@ -107,6 +123,25 @@ export default function MembersPage() {
           <h2 className="text-2xl font-bold text-gray-800">メンバー管理</h2>
         </div>
 
+        {/* 承認待ち招待 */}
+        {pendingInvitations.length > 0 && (
+          <section className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-amber-700 flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-5 h-5 bg-amber-400 text-white text-[10px] font-bold rounded-full">{pendingInvitations.length}</span>
+              承認待ちの招待
+            </h3>
+            <ul className="space-y-1.5">
+              {pendingInvitations.map((inv) => (
+                <PendingInvitationRow
+                  key={inv.id}
+                  invitation={inv}
+                  onCancelled={(id) => setPendingInvitations((prev) => prev.filter((i) => i.id !== id))}
+                />
+              ))}
+            </ul>
+          </section>
+        )}
+
         <ul className="space-y-2">
           {sorted.map((m) => (
             <MemberRow
@@ -126,6 +161,53 @@ export default function MembersPage() {
         )}
       </main>
     </div>
+  );
+}
+
+function PendingInvitationRow({
+  invitation,
+  onCancelled,
+}: {
+  invitation: PendingInvitation;
+  onCancelled: (id: string) => void;
+}) {
+  const [cancelling, setCancelling] = useState(false);
+
+  async function handleCancel() {
+    if (!confirm(`${invitation.inviteeEmail} への招待を取り消しますか？`)) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/invitations/${invitation.id}`, { method: "DELETE" });
+      if (res.ok) onCancelled(invitation.id);
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  return (
+    <li className="bg-white border border-amber-100 rounded-lg px-4 py-2.5 flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-gray-800 truncate">
+          {invitation.invitee?.name ?? invitation.inviteeEmail}
+        </p>
+        {invitation.invitee?.name && (
+          <p className="text-xs text-gray-400 truncate">{invitation.inviteeEmail}</p>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_BADGE[invitation.role]}`}>
+          {ROLE_LABEL[invitation.role]}
+        </span>
+        <span className="text-xs text-amber-500 font-medium">招待中</span>
+        <button
+          onClick={handleCancel}
+          disabled={cancelling}
+          className="text-xs text-red-400 hover:text-red-600 disabled:opacity-50 transition border border-red-200 rounded px-2 py-0.5 hover:bg-red-50"
+        >
+          {cancelling ? "..." : "取り消し"}
+        </button>
+      </div>
+    </li>
   );
 }
 
@@ -241,6 +323,198 @@ function InviteForm({ groupId, availableRoles }: { groupId: string; availableRol
       </form>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       {success && <p className="mt-2 text-sm text-green-600">{success}</p>}
+
+      {/* CSV一括招待 */}
+      <CsvInviteSection groupId={groupId} role={role} availableRoles={availableRoles} />
+    </div>
+  );
+}
+
+type CsvEntry = { email: string; role: "LEADER" | "MEMBER" };
+type SendResult = { email: string; ok: boolean; message: string };
+
+function CsvInviteSection({ groupId, role: defaultRole, availableRoles }: { groupId: string; role: "LEADER" | "MEMBER"; availableRoles: ("LEADER" | "MEMBER")[] }) {
+  const [open, setOpen] = useState(false);
+  const [preview, setPreview] = useState<CsvEntry[]>([]);
+  const [sending, setSending] = useState(false);
+  const [results, setResults] = useState<SendResult[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const emails = text
+        .split(/[\r\n,;]+/)
+        .map((s) => s.trim().replace(/^["']|["']$/g, ""))
+        .filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s));
+      if (emails.length === 0) {
+        setResults([{ email: "", ok: false, message: "有効なメールアドレスが見つかりませんでした" }]);
+        return;
+      }
+      // 重複除去してプレビューへ
+      const unique = [...new Set(emails)];
+      setPreview(unique.map((email) => ({ email, role: defaultRole })));
+      setResults([]);
+    };
+    reader.readAsText(file);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function toggleLeader(index: number) {
+    setPreview((prev) => {
+      const updated = prev.map((e, i) =>
+        i === index ? { ...e, role: (e.role === "LEADER" ? "MEMBER" : "LEADER") as "LEADER" | "MEMBER" } : e
+      );
+      // 管理側を上、メンバーを下に並び替え
+      return [
+        ...updated.filter((e) => e.role === "LEADER"),
+        ...updated.filter((e) => e.role === "MEMBER"),
+      ];
+    });
+  }
+
+  function removeEntry(index: number) {
+    setPreview((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleSend() {
+    if (preview.length === 0) return;
+    setSending(true);
+    setResults([]);
+    const newResults: SendResult[] = [];
+    for (const { email, role } of preview) {
+      const res = await fetch(`/api/groups/${groupId}/invitations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, role }),
+      });
+      const data = await res.json().catch(() => ({}));
+      newResults.push({
+        email,
+        ok: res.ok,
+        message: res.ok
+          ? data.isNewUser ? "招待メール送信（未登録）" : "招待送信済み"
+          : data.error ?? "エラー",
+      });
+    }
+    setResults(newResults);
+    setPreview([]);
+    setSending(false);
+  }
+
+  const successCount = results.filter((r) => r.ok).length;
+  const failCount = results.filter((r) => !r.ok).length;
+
+  return (
+    <div className="mt-4 border-t border-gray-100 pt-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-xs text-indigo-500 hover:text-indigo-700 font-medium transition flex items-center gap-1"
+      >
+        <svg className={`w-3 h-3 transition-transform ${open ? "rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        CSVで一括招待
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-3">
+          <p className="text-xs text-gray-500">
+            メールアドレスを1行1件またはカンマ区切りで記載したCSVファイルを選択してください。取り込み後にロールを変更できます。
+          </p>
+          {/* サンプル表示 */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 space-y-1">
+            <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">CSVの例</p>
+            <pre className="text-xs text-slate-600 leading-relaxed">{`tanaka@example.com\nsuzuki@example.com\nwatanabe@example.com`}</pre>
+            <p className="text-[10px] text-slate-400">カンマ区切り（1行に複数）も可：<span className="font-mono">a@example.com,b@example.com</span></p>
+          </div>
+          <p className="text-xs text-gray-500 hidden">
+          </p>
+          <label className="flex items-center gap-2 w-fit px-4 py-2 rounded-lg border border-indigo-300 text-indigo-600 hover:bg-indigo-50 text-sm cursor-pointer transition">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            CSVファイルを選択
+            <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={handleFile} />
+          </label>
+
+          {/* プレビューリスト */}
+          {preview.length > 0 && (
+            <div className="space-y-2">
+              <div className="max-h-52 overflow-y-auto border border-gray-100 rounded-lg">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-slate-100">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium text-gray-600">メールアドレス</th>
+                      {availableRoles.includes("LEADER") && (
+                        <th className="px-3 py-2 font-medium text-indigo-600 whitespace-nowrap">管理側として招待</th>
+                      )}
+                      <th className="px-2 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {preview.map((entry, i) => (
+                      <tr key={entry.email} className={`transition-colors ${entry.role === "LEADER" ? "bg-indigo-50" : "bg-white"}`}>
+                        <td className="px-3 py-2 text-gray-700 truncate max-w-[200px]">{entry.email}</td>
+                        {availableRoles.includes("LEADER") && (
+                          <td className="px-3 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={entry.role === "LEADER"}
+                              onChange={() => toggleLeader(i)}
+                              className="accent-indigo-600 w-4 h-4 cursor-pointer"
+                            />
+                          </td>
+                        )}
+                        <td className="px-2 py-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeEntry(i)}
+                            className="text-gray-300 hover:text-red-400 transition"
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={sending}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg disabled:opacity-50 transition"
+              >
+                {sending ? "送信中..." : `${preview.length}件に招待を送る`}
+              </button>
+            </div>
+          )}
+
+          {/* 送信結果 */}
+          {results.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-gray-600">
+                結果: <span className="text-green-600">{successCount}件成功</span>
+                {failCount > 0 && <span className="text-red-500 ml-2">{failCount}件失敗</span>}
+              </p>
+              <ul className="max-h-40 overflow-y-auto space-y-1">
+                {results.map((r, i) => (
+                  <li key={i} className={`text-xs px-3 py-1.5 rounded-lg flex items-center gap-2 ${r.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+                    <span className="shrink-0">{r.ok ? "✓" : "✗"}</span>
+                    <span className="font-medium truncate">{r.email || "—"}</span>
+                    <span className="ml-auto shrink-0 text-[10px] opacity-70">{r.message}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
