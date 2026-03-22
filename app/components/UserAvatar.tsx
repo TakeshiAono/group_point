@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 type Props = {
-  userId: string;
+  userId: string | undefined;
   name: string | null;
   size?: "sm" | "md";
 };
@@ -12,6 +12,7 @@ export default function UserAvatar({ userId, name, size = "sm" }: Props) {
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!userId) return;
     fetch(`/api/avatar/download-url?userId=${userId}`)
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.url) setUrl(d.url); })
