@@ -16,7 +16,7 @@
 ### 1. 依存パッケージのインストール
 
 ```bash
-nvm use 20.19.5
+nvm use 22
 npm install
 ```
 
@@ -72,6 +72,33 @@ npm run dev
 ```
 
 http://localhost:3000 でアクセスできます。
+
+---
+
+## AWS S3 アイコン機能のセットアップ
+
+ユーザーアイコン画像は AWS S3 に保存されます。ローカル開発では AWS Identity Center (SSO) で認証します。
+
+### 前提条件
+
+- AWS CLI v2 がインストールされていること
+- `~/.aws/config` に `group-point-dev` プロファイルが設定されていること（初回のみ設定が必要）
+
+### SSOログイン（セッション切れの都度実行）
+
+```bash
+./infra/sso-login.sh
+```
+
+ブラウザが開くので認証してください。セッションは約8時間有効です。
+
+### S3バケットのプロビジョニング（初回のみ）
+
+```bash
+./infra/deploy-dev.sh
+```
+
+`.env` の `AWS_PROFILE`・`AWS_REGION`・`AWS_ENV` をもとに CloudFormation でバケットを作成します。
 
 ---
 

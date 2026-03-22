@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { formatPoint, type PointGroup } from "@/lib/pointFormat";
+import UserAvatar from "@/app/components/UserAvatar";
 import {
   LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip,
   CartesianGrid, Legend, ResponsiveContainer, ReferenceLine,
@@ -170,6 +171,9 @@ export default function GroupAnalyticsPage() {
 
   const pg: PointGroup = { pointUnit: group.pointUnit, laborCostPerHour: group.laborCostPerHour, timeUnit: group.timeUnit };
 
+  // GroupMember.id → User.id のマップ
+  const memberIdToUserId = Object.fromEntries(group.members.map((m) => [m.id, m.user.id]));
+
   // ── 上部データ ─────────────────────────────────────────────
   type PieEntry = { id: string; name: string; value: number; label: string };
   type LineRow = Record<string, string | number>;
@@ -315,6 +319,7 @@ export default function GroupAnalyticsPage() {
               lineMembers={topLineMembers}
               formatLineTooltip={(v) => activeTab === "points" ? formatPoint(Number(v), pg) : `${v} 件`}
               myMemberId={myMemberId}
+              memberIdToUserId={memberIdToUserId}
             />
           ) : (
             <AnalysisSection
@@ -330,6 +335,7 @@ export default function GroupAnalyticsPage() {
               lineMembers={completionLineMembers}
               formatLineTooltip={(v) => `${v} 件`}
               myMemberId={myMemberId}
+              memberIdToUserId={memberIdToUserId}
             />
           )}
         </div>
@@ -349,7 +355,7 @@ function AnalysisSection({
   granularity, onGranularityChange,
   pieData, formatPieValue,
   lineRows, lineMembers, formatLineTooltip,
-  myMemberId,
+  myMemberId, memberIdToUserId,
 }: {
   title: string;
   allBuckets: string[];
@@ -363,6 +369,7 @@ function AnalysisSection({
   lineMembers: LineMember[];
   formatLineTooltip: (v: number | string) => string;
   myMemberId: string | null;
+  memberIdToUserId: Record<string, string>;
 }) {
   const [topN, setTopN] = useState<"all" | 3 | 5 | 10>("all");
   const limit = topN === "all" ? pieData.length : topN;
@@ -418,15 +425,24 @@ function AnalysisSection({
                     );
                   })}
                 </Pie>
-                <Tooltip formatter={(v, name) => [formatPieValue(v as number), name]} />
+                <Tooltip content={
+                  <CustomPieTooltip
+                    formatValue={formatPieValue}
+                    memberIdToUserId={memberIdToUserId}
+                    pieData={displayedPie}
+                    colors={MEMBER_COLORS}
+                  />
+                } />
               </PieChart>
             </ResponsiveContainer>
             <ul className="space-y-2 flex-1 min-w-0">
               {displayedPie.map((entry, i) => {
                 const isMe = entry.id === myMemberId;
+                const userId = memberIdToUserId[entry.id];
                 return (
                   <li key={entry.id} className={`flex items-center gap-2 text-sm ${isMe ? "font-bold" : ""}`}>
                     <span className="inline-block w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
+                    <UserAvatar userId={userId} name={entry.name} size="sm" />
                     <span className={`flex-1 truncate ${isMe ? "text-gray-900" : "text-gray-700"}`}>
                       {entry.name}
                     </span>
@@ -459,8 +475,14 @@ function AnalysisSection({
               <XAxis dataKey="month" tick={{ fontSize: 11 }}
                 tickFormatter={(v: string) => granularity === "week" ? v.slice(5) : v} />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v, name) => [formatLineTooltip(v as number), name]} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Tooltip content={
+                <CustomLineTooltip
+                  formatValue={formatLineTooltip}
+                  lineMembers={displayedLineMembers}
+                  memberIdToUserId={memberIdToUserId}
+                  colors={MEMBER_COLORS}
+                />
+              } />
               {granularity === "week" && displayedLineRows
                 .filter((row) => String(row.month).endsWith("-w1"))
                 .map((row) => {
@@ -484,6 +506,20 @@ function AnalysisSection({
               })}
             </LineChart>
           </ResponsiveContainer>
+          {/* カスタム凡例（アイコン付き） */}
+          <ul className="flex flex-wrap gap-x-4 gap-y-1.5 justify-center pt-1">
+            {displayedLineMembers.map((mp, i) => {
+              const isMe = mp.memberId === myMemberId;
+              const userId = memberIdToUserId[mp.memberId];
+              return (
+                <li key={mp.memberId} className={`flex items-center gap-1.5 text-xs ${isMe ? "font-bold" : "text-gray-600"}`}>
+                  <span className="inline-block w-3 h-0.5 shrink-0 rounded" style={{ backgroundColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
+                  <UserAvatar userId={userId} name={mp.name} size="sm" />
+                  <span>{mp.name}</span>
+                </li>
+              );
+            })}
+          </ul>
           <div className="flex items-center justify-center gap-2 pt-1">
             <span className="text-xs text-gray-400">表示人数</span>
             <select
@@ -499,6 +535,70 @@ function AnalysisSection({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function CustomPieTooltip({
+  active, payload,
+  formatValue, memberIdToUserId, pieData, colors,
+}: {
+  active?: boolean;
+  payload?: { name: string; value: number }[];
+  formatValue: (v: number | string) => string;
+  memberIdToUserId: Record<string, string>;
+  pieData: PieEntry[];
+  colors: string[];
+}) {
+  if (!active || !payload?.length) return null;
+  const entry = payload[0];
+  const pieEntry = pieData.find((p) => p.name === entry.name);
+  const userId = pieEntry ? memberIdToUserId[pieEntry.id] : undefined;
+  const color = pieEntry ? colors[pieData.indexOf(pieEntry) % colors.length] : "#6b7280";
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="inline-block w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} />
+        <UserAvatar userId={userId} name={entry.name} size="sm" />
+        <span className="text-gray-700">{entry.name}</span>
+        <span className="font-bold ml-2" style={{ color }}>{formatValue(entry.value)}</span>
+      </div>
+    </div>
+  );
+}
+
+function CustomLineTooltip({
+  active, payload, label,
+  formatValue, lineMembers, memberIdToUserId, colors,
+}: {
+  active?: boolean;
+  payload?: { name: string; value: number; color: string }[];
+  label?: string;
+  formatValue: (v: number | string) => string;
+  lineMembers: LineMember[];
+  memberIdToUserId: Record<string, string>;
+  colors: string[];
+}) {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 space-y-2 text-sm">
+      <p className="text-xs text-gray-400 font-medium">{label}</p>
+      {payload.map((entry, i) => {
+        const member = lineMembers.find((m) => m.name === entry.name);
+        const userId = member ? memberIdToUserId[member.memberId] : undefined;
+        return (
+          <div key={i} className="flex items-center gap-2">
+            <span className="inline-block w-3 h-0.5 shrink-0 rounded" style={{ backgroundColor: entry.color }} />
+            <UserAvatar userId={userId} name={entry.name} size="sm" />
+            <span className="text-gray-700">{entry.name}</span>
+            <span className="font-bold ml-auto pl-4" style={{ color: entry.color }}>
+              {formatValue(entry.value)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

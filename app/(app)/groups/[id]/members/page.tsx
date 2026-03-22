@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import UserAvatar from "@/app/components/UserAvatar";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 
@@ -151,6 +152,7 @@ function MemberRow({
   return (
     <li className="bg-white border border-gray-200 rounded-lg px-5 py-3 flex items-center justify-between">
       <div className="flex items-center gap-2">
+        <UserAvatar userId={member.user.id} name={member.user.name} />
         <span className="text-sm font-medium text-gray-800">{member.user.name ?? member.user.email}</span>
         {member.user.name && <span className="text-xs text-gray-400">{member.user.email}</span>}
         <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${ROLE_BADGE[member.role]}`}>

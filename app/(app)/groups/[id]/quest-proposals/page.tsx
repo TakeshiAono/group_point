@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import UserAvatar from "@/app/components/UserAvatar";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function parseJson(res: Response): Promise<any> {
@@ -228,8 +229,9 @@ function ProposalCard({
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[proposal.status]}`}>
           {STATUS_LABEL[proposal.status]}
         </span>
-        <span className="text-xs text-gray-400">
-          提案者: {proposal.proposer?.user?.name ?? proposal.proposer?.user?.email ?? "不明"}
+        <span className="flex items-center gap-1 text-xs text-gray-400">
+          <UserAvatar userId={proposal.proposer?.user?.id} name={proposal.proposer?.user?.name ?? null} />
+          {proposal.proposer?.user?.name ?? proposal.proposer?.user?.email ?? "不明"}
         </span>
         <span className="text-xs text-gray-400">
           {new Date(proposal.createdAt).toLocaleDateString("ja-JP")}

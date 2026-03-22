@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Sidebar from "./Sidebar";
+import UserAvatar from "./UserAvatar";
 import { logout } from "@/app/actions/auth";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [me, setMe] = useState<{ id: string; name: string | null } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/me").then((r) => r.ok ? r.json() : null).then(setMe);
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
@@ -33,7 +39,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {[
               { href: "/quests", label: "案件一覧" },
               { href: "/subquests", label: "サブクエスト" },
-              { href: "/profile", label: "プロフィール" },
               { href: "/contact", label: "お問い合わせ" },
             ].map(({ href, label }) => (
               <Link
@@ -44,6 +49,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {label}
               </Link>
             ))}
+            {/* プロフィールリンク（アイコン付き） */}
+            <Link
+              href="/profile"
+              className="flex items-center gap-2 text-sm text-white/80 hover:text-white hover:bg-white/10 px-3 py-1.5 rounded-lg transition"
+            >
+              {me && <UserAvatar userId={me.id} name={me.name} size="sm" />}
+              <span>プロフィール</span>
+            </Link>
           </nav>
 
           <form action={logout}>

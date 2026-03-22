@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { formatPoint, unitLabel, type PointGroup } from "@/lib/pointFormat";
+import UserAvatar from "@/app/components/UserAvatar";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 
@@ -190,6 +191,10 @@ function QuestCard({ quest, groupId, pointGroup }: { quest: Quest; groupId: stri
             )}
           </div>
           <p className="text-sm font-medium text-gray-800 truncate">{quest.title}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <UserAvatar userId={quest.creator.user.id} name={quest.creator.user.name} />
+            <span className="text-xs text-gray-400">{quest.creator.user.name ?? quest.creator.user.email}</span>
+          </div>
         </div>
         <p className="text-base font-bold text-blue-600 shrink-0">{formatPoint(quest.pointReward, pointGroup)}</p>
       </Link>
