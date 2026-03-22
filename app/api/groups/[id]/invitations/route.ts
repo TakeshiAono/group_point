@@ -6,6 +6,7 @@ import { sendInvitationEmail } from "@/lib/emails/invitation";
 // グループへの招待を送る
 // ADMIN: LEADER・MEMBERを招待可能
 // LEADER: MEMBERのみ招待可能
+// アカウント未登録のメールアドレスへも送信可能
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -35,21 +36,22 @@ export async function POST(
 
   // LEADERはMEMBERしか招待できない
   if (inviterMember.role === "LEADER" && role === "LEADER") {
-    return NextResponse.json({ error: "管理側メンバーの招待はADMINのみ実行できます" }, { status: 403 });
+    return NextResponse.json({ error: "マネージャーの招待は管理者のみ実行できます" }, { status: 403 });
   }
 
-  // 招待対象ユーザーを検索
-  const invitee = await prisma.user.findUnique({ where: { email: email.trim() } });
-  if (!invitee) {
-    return NextResponse.json({ error: "指定されたメールアドレスのユーザーが見つかりません" }, { status: 404 });
-  }
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // 招待対象ユーザーを検索（アカウントなくてもOK）
+  const invitee = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
   // 既にメンバーの場合はエラー
-  const alreadyMember = await prisma.groupMember.findUnique({
-    where: { userId_groupId: { userId: invitee.id, groupId } },
-  });
-  if (alreadyMember) {
-    return NextResponse.json({ error: "このユーザーはすでにグループのメンバーです" }, { status: 409 });
+  if (invitee) {
+    const alreadyMember = await prisma.groupMember.findUnique({
+      where: { userId_groupId: { userId: invitee.id, groupId } },
+    });
+    if (alreadyMember) {
+      return NextResponse.json({ error: "このユーザーはすでにグループのメンバーです" }, { status: 409 });
+    }
   }
 
   // 招待者情報を取得
@@ -58,14 +60,28 @@ export async function POST(
     select: { name: true },
   });
 
-  // 既存の招待があれば再送（ステータスをPENDINGに戻す）
+  const group = await prisma.group.findUnique({
+    where: { id: groupId },
+    select: { name: true },
+  });
+  if (!group) {
+    return NextResponse.json({ error: "グループが見つかりません" }, { status: 404 });
+  }
+
+  // 招待を作成（既存なら再送）
   const invitation = await prisma.invitation.upsert({
-    where: { groupId_inviteeId: { groupId, inviteeId: invitee.id } },
-    update: { status: "PENDING", role, inviterId: inviterMember.id },
+    where: { groupId_inviteeEmail: { groupId, inviteeEmail: normalizedEmail } },
+    update: {
+      status: "PENDING",
+      role,
+      inviterId: inviterMember.id,
+      inviteeId: invitee?.id ?? null,
+    },
     create: {
       groupId,
       inviterId: inviterMember.id,
-      inviteeId: invitee.id,
+      inviteeId: invitee?.id ?? null,
+      inviteeEmail: normalizedEmail,
       role,
     },
     include: {
@@ -74,15 +90,16 @@ export async function POST(
     },
   });
 
-  // メール送信（失敗してもAPIレスポンスには影響させない）
+  // メール送信
   const appUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   sendInvitationEmail({
-    to: invitee.email,
-    inviteeName: invitee.name,
-    groupName: invitation.group.name,
+    to: normalizedEmail,
+    inviteeName: invitee?.name ?? null,
+    groupName: group.name,
     inviterName: inviter?.name ?? null,
     role,
     appUrl,
+    isNewUser: !invitee,
   }).catch((err) => console.error("[mailer] 招待メール送信失敗:", err));
 
   return NextResponse.json(invitation, { status: 201 });

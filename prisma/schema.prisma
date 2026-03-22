@@ -221,23 +221,25 @@ enum QuestProposalStatus {
 
 /// グループへの招待。LEADERが送り、招待されたユーザーが承認/拒否する。
 model Invitation {
-  id        String           @id @default(cuid())
-  groupId   String
+  id           String           @id @default(cuid())
+  groupId      String
   /// 招待を送ったGroupMember.id（LEADER）
-  inviterId String
-  /// 招待されたUser.id
-  inviteeId String
+  inviterId    String
+  /// 招待されたUser.id（アカウント作成後に紐づく）
+  inviteeId    String?
+  /// 招待先メールアドレス（アカウント未作成でも招待可能）
+  inviteeEmail String
   /// 付与予定のロール
-  role      GroupRole        @default(MEMBER)
-  status    InvitationStatus @default(PENDING)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  group     Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  inviter   GroupMember      @relation(fields: [inviterId], references: [id], onDelete: Cascade)
-  invitee   User             @relation(fields: [inviteeId], references: [id], onDelete: Cascade)
+  role         GroupRole        @default(MEMBER)
+  status       InvitationStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  group        Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  inviter      GroupMember      @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee      User?            @relation(fields: [inviteeId], references: [id], onDelete: SetNull)
 
-  /// 同じグループへの重複招待を防ぐ
-  @@unique([groupId, inviteeId])
+  /// 同じグループへの同メールアドレスへの重複招待を防ぐ
+  @@unique([groupId, inviteeEmail])
 }
 
 enum InvitationStatus {
