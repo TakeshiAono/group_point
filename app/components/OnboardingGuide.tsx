@@ -12,6 +12,8 @@ type StepConfig = {
   /** 説明のみのステップ（「次へ」ボタンを表示） */
   isExplanation?: boolean;
   actionLabel?: string;
+  /** アクションステップでも「スキップして次へ」ボタンを表示する */
+  skippable?: boolean;
   /** 「このページへ」ボタン用のパス生成 */
   navigatePath?: (groupId: string | null) => string | null;
 };
@@ -72,6 +74,7 @@ const STEP_CONFIG: Partial<Record<NonNullable<OnboardingStep>, StepConfig>> = {
     description:
       "招待フォームにメールアドレスを入力して「招待を送る」をクリックしてください。招待されたユーザーがアプリにログインすると承認・拒否できます。",
     isAction: true,
+    skippable: true,
     navigatePath: (gid) => (gid ? `/groups/${gid}/members` : null),
   },
   bonus: {
@@ -199,6 +202,16 @@ export default function OnboardingGuide() {
             <p className="text-xs text-indigo-500 font-medium">
               ↑ 上のボタンをクリックすると自動で次へ進みます
             </p>
+          )}
+
+          {/* スキップ可能なアクションステップ */}
+          {config.isAction && config.skippable && (
+            <button
+              onClick={handleAction}
+              className="w-full py-1.5 text-xs border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 transition"
+            >
+              招待せずに次へ
+            </button>
           )}
 
           <div className="flex items-center justify-between pt-1">
