@@ -23,7 +23,7 @@ export async function PATCH(
   if (!invitation) {
     return NextResponse.json({ error: "招待が見つかりません" }, { status: 404 });
   }
-  if (invitation.inviteeId !== session.user.id) {
+  if (!invitation.inviteeId || invitation.inviteeId !== session.user.id) {
     return NextResponse.json({ error: "この招待を操作する権限がありません" }, { status: 403 });
   }
   if (invitation.status !== "PENDING") {

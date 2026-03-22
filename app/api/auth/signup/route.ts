@@ -23,8 +23,14 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: { name, email, password: hashedPassword },
+    });
+
+    // このメールアドレス宛のpending招待をユーザーに紐づける
+    await prisma.invitation.updateMany({
+      where: { inviteeEmail: email.toLowerCase(), inviteeId: null, status: "PENDING" },
+      data: { inviteeId: user.id },
     });
 
     return NextResponse.json({ message: "アカウントを作成しました" }, { status: 201 });

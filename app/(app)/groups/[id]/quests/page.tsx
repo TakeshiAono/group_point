@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useOnboarding } from "@/lib/onboarding-context";
 import Link from "next/link";
 import { formatPoint, unitLabel, type PointGroup } from "@/lib/pointFormat";
 import UserAvatar from "@/app/components/UserAvatar";
@@ -49,6 +50,7 @@ const DEFAULT_POINT_GROUP: PointGroup = { pointUnit: "pt", laborCostPerHour: 0, 
 
 export default function QuestsPage() {
   const { id: groupId } = useParams<{ id: string }>();
+  const onboarding = useOnboarding();
   const [quests, setQuests] = useState<Quest[]>([]);
   const [myMember, setMyMember] = useState<GroupMember | null>(null);
   const [pointGroup, setPointGroup] = useState<PointGroup>(DEFAULT_POINT_GROUP);
@@ -144,6 +146,7 @@ export default function QuestsPage() {
               setQuests((prev) => [q, ...prev]);
               setShowForm(false);
               setTypeFilter(q.questType);
+              if (onboarding?.step === "create-quest") onboarding.onQuestCreated();
               if (q.questType === "MEMBER") {
                 setMyMember((prev) => prev ? { ...prev, memberPoints: prev.memberPoints - q.pointReward } : prev);
               }

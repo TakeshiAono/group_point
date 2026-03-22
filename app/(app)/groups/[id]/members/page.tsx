@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import UserAvatar from "@/app/components/UserAvatar";
+import { useOnboarding } from "@/lib/onboarding-context";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 
@@ -40,7 +41,7 @@ function formatPoint(points: number, group: Pick<Group, "pointUnit" | "laborCost
 }
 
 const ROLE_LABEL: Record<Role, string> = {
-  ADMIN: "管理人", LEADER: "管理側メンバー", MEMBER: "一般メンバー",
+  ADMIN: "管理者", LEADER: "マネージャー", MEMBER: "メンバー",
 };
 
 const ROLE_BADGE: Record<Role, string> = {
@@ -115,6 +116,7 @@ export default function MembersPage() {
               deletable={canDelete(m)}
               onRemoved={removeMember}
               pointGroup={group}
+              isMe={m.user.id === myUserId}
             />
           ))}
         </ul>
@@ -128,13 +130,14 @@ export default function MembersPage() {
 }
 
 function MemberRow({
-  member, groupId, deletable, onRemoved, pointGroup,
+  member, groupId, deletable, onRemoved, pointGroup, isMe,
 }: {
   member: Member;
   groupId: string;
   deletable: boolean;
   onRemoved: (id: string) => void;
   pointGroup: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
+  isMe?: boolean;
 }) {
   const [removing, setRemoving] = useState(false);
 
@@ -150,7 +153,7 @@ function MemberRow({
   }
 
   return (
-    <li className="bg-white border border-gray-200 rounded-lg px-5 py-3 flex items-center justify-between">
+    <li className={`rounded-lg px-5 py-3 flex items-center justify-between border ${isMe ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200"}`}>
       <div className="flex items-center gap-2">
         <UserAvatar userId={member.user.id} name={member.user.name} />
         <span className="text-sm font-medium text-gray-800">{member.user.name ?? member.user.email}</span>
@@ -158,6 +161,7 @@ function MemberRow({
         <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${ROLE_BADGE[member.role]}`}>
           {ROLE_LABEL[member.role]}
         </span>
+        {isMe && <span className="text-xs text-indigo-500 font-medium">あなた</span>}
       </div>
       <div className="flex items-center gap-3">
         <span className="text-sm text-gray-600">{formatPoint(member.memberPoints, pointGroup)}</span>
@@ -176,6 +180,7 @@ function MemberRow({
 }
 
 function InviteForm({ groupId, availableRoles }: { groupId: string; availableRoles: ("LEADER" | "MEMBER")[] }) {
+  const onboarding = useOnboarding();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"LEADER" | "MEMBER">(availableRoles[0]);
   const [submitting, setSubmitting] = useState(false);
@@ -193,8 +198,12 @@ function InviteForm({ groupId, availableRoles }: { groupId: string; availableRol
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "エラーが発生しました"); return; }
-      setSuccess(`${data.invitee.name ?? data.invitee.email} に招待を送りました`);
+      const displayName = data.inviteeName ?? data.inviteeEmail ?? email;
+      setSuccess(data.isNewUser
+        ? `${displayName} に招待メールを送りました（アカウント未登録）`
+        : `${displayName} に招待を送りました`);
       setEmail("");
+      if (onboarding?.step === "invite") onboarding.onInviteSent();
     } finally {
       setSubmitting(false);
     }
@@ -225,7 +234,7 @@ function InviteForm({ groupId, availableRoles }: { groupId: string; availableRol
         <button
           type="submit"
           disabled={submitting}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+          className={`px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition${onboarding?.step === "invite" ? " onboarding-highlight" : ""}`}
         >
           {submitting ? "送信中..." : "招待を送る"}
         </button>

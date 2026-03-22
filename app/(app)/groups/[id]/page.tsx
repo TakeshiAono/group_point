@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { useOnboarding } from "@/lib/onboarding-context";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 
@@ -126,9 +127,9 @@ const SUB_STATUS_COLOR: Record<SubQuest["status"], string> = {
 };
 
 const ROLE_LABEL: Record<Role, string> = {
-  ADMIN: "管理人",
-  LEADER: "管理側メンバー",
-  MEMBER: "一般メンバー",
+  ADMIN: "管理者",
+  LEADER: "マネージャー",
+  MEMBER: "メンバー",
 };
 
 const ROLE_BADGE: Record<Role, string> = {
@@ -140,6 +141,7 @@ const ROLE_BADGE: Record<Role, string> = {
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const onboarding = useOnboarding();
   const [group, setGroup] = useState<Group | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [quests, setQuests] = useState<Quest[]>([]);
@@ -340,6 +342,22 @@ export default function GroupDetailPage() {
 
           <div className="space-y-3">
             <Link
+              href={`/groups/${id}/members`}
+              className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-lg shadow shrink-0">
+                👥
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-800 text-sm flex items-center gap-1.5">
+                  メンバー
+                  <span className="text-xs text-indigo-500 font-medium">{group.members.length}人</span>
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">メンバー一覧・招待・管理</p>
+              </div>
+              <span className="text-slate-300 text-lg">→</span>
+            </Link>
+            <Link
               href={`/groups/${id}/quest-proposals`}
               className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm"
             >
@@ -354,7 +372,8 @@ export default function GroupDetailPage() {
             </Link>
             <Link
               href={`/groups/${id}/quests`}
-              className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm"
+              onClick={() => { if (onboarding?.step === "create-quest") onboarding.onQuestCreated(); }}
+              className={`flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm${onboarding?.step === "create-quest" ? " onboarding-highlight" : ""}`}
             >
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-lg shadow shrink-0">
                 ⚔️
@@ -401,20 +420,6 @@ export default function GroupDetailPage() {
           />
         )}
 
-        {/* メンバー管理ページへのリンク */}
-        <Link
-          href={`/groups/${id}/members`}
-          className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-6 py-5 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm"
-        >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-lg shadow shrink-0">
-            👥
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-slate-800">メンバー</p>
-            <p className="text-xs text-slate-400 mt-0.5">メンバー一覧・招待・管理</p>
-          </div>
-          <span className="text-slate-300 text-lg">→</span>
-        </Link>
       </main>
 
       {/* 削除確認ダイアログ（1回目） */}
@@ -476,6 +481,7 @@ function IssuedPointsEditor({
   onSettingsUpdated: (s: Partial<Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit" | "displayMultiplier">>) => void;
 }) {
   const reclaimable = totalIssuedPoints - totalCirculating;
+  const onboarding = useOnboarding();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pointUnit, setPointUnit] = useState(group.pointUnit);
   const [laborCost, setLaborCost] = useState(group.laborCostPerHour);
@@ -500,6 +506,9 @@ function IssuedPointsEditor({
       }
       onUpdated(data.totalIssuedPoints);
       setAmount(0);
+      if (onboarding?.step === "issue-points" && delta > 0) {
+        onboarding.onPointsIssued();
+      }
     } finally {
       setSaving(false);
     }
@@ -885,6 +894,7 @@ function DeltaForm({
   onSubmit: (delta: number, amount: number, setError: (e: string) => void, setSaving: (b: boolean) => void, setAmount: (v: number) => void) => void;
   group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit" | "displayMultiplier">;
 }) {
+  const onboarding = useOnboarding();
   const [amount, setAmount] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -920,7 +930,7 @@ function DeltaForm({
         <button
           type="submit"
           disabled={saving || (maxPt !== undefined && maxPt <= 0)}
-          className={`px-4 py-2 text-white text-sm rounded-lg disabled:opacity-50 transition shadow ${buttonClass}`}
+          className={`px-4 py-2 text-white text-sm rounded-lg disabled:opacity-50 transition shadow ${buttonClass}${onboarding?.step === "issue-points" && sign === 1 ? " onboarding-highlight" : ""}`}
         >
           {saving ? "..." : buttonLabel}
         </button>
@@ -945,8 +955,20 @@ function GroupSettingsSection({
   proposalReward: number;
   onProposalRewardUpdated: (v: number) => void;
 }) {
+  const onboarding = useOnboarding();
+  const router = useRouter();
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (onboarding?.step === "bonus") {
+      setTimeout(() => {
+        sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 300);
+    }
+  }, [onboarding?.step]);
+
   return (
-    <section className="bg-white border border-slate-100 rounded-2xl p-6 space-y-5 shadow-sm">
+    <section ref={sectionRef} className="bg-white border border-slate-100 rounded-2xl p-6 space-y-5 shadow-sm">
       <h3 className="font-bold text-slate-700 flex items-center gap-2">
         <span className="w-1.5 h-5 bg-gradient-to-b from-amber-400 to-orange-500 rounded-full inline-block" />
         グループ設定
@@ -958,11 +980,19 @@ function GroupSettingsSection({
         description="提案が承認されたときに提案者へ付与する一律ポイント"
         canEdit={canEdit}
         displayValue={`${proposalReward} pt`}
+        onboardingHighlight={onboarding?.step === "bonus"}
         editForm={(onClose) => (
           <ProposalRewardForm
             groupId={groupId}
             current={proposalReward}
-            onSaved={(v) => { onProposalRewardUpdated(v); onClose(); }}
+            onSaved={(v) => {
+              onProposalRewardUpdated(v);
+              onClose();
+              if (onboarding?.step === "bonus") {
+                onboarding.advance();
+                router.push(`/groups/${groupId}/analytics`);
+              }
+            }}
             onCancel={onClose}
           />
         )}
@@ -979,12 +1009,14 @@ function SettingRow({
   canEdit,
   displayValue,
   editForm,
+  onboardingHighlight,
 }: {
   label: string;
   description: string;
   canEdit: boolean;
   displayValue: string;
   editForm: (onClose: () => void) => React.ReactNode;
+  onboardingHighlight?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -1000,7 +1032,7 @@ function SettingRow({
           {canEdit && !editing && (
             <button
               onClick={() => setEditing(true)}
-              className="text-xs text-indigo-500 hover:text-indigo-700 transition border border-indigo-200 rounded-lg px-2.5 py-0.5 hover:bg-indigo-50"
+              className={`text-xs text-indigo-500 hover:text-indigo-700 transition border border-indigo-200 rounded-lg px-2.5 py-0.5 hover:bg-indigo-50${onboardingHighlight ? " onboarding-highlight" : ""}`}
             >
               変更
             </button>

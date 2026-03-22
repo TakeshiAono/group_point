@@ -1349,6 +1349,7 @@ export const UserScalarFieldEnum = {
   emailVerified: 'emailVerified',
   password: 'password',
   image: 'image',
+  onboardingCompleted: 'onboardingCompleted',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1467,6 +1468,7 @@ export const InvitationScalarFieldEnum = {
   groupId: 'groupId',
   inviterId: 'inviterId',
   inviteeId: 'inviteeId',
+  inviteeEmail: 'inviteeEmail',
   role: 'role',
   status: 'status',
   createdAt: 'createdAt',
@@ -1568,6 +1570,13 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'DateTime[]'
  */
 export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Boolean'
+ */
+export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
     
 
 

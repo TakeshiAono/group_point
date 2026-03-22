@@ -24,3 +24,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes onboarding-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.9); }
+  50% { box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+}
+
+.onboarding-highlight {
+  animation: onboarding-ring 1s ease-in-out infinite;
+  outline: 3px solid #eab308;
+  outline-offset: 3px;
+  border-radius: 8px;
+  position: relative;
+  z-index: 1;
+  background-color: #eab308 !important;
+  color: #000 !important;
+}
