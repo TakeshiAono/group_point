@@ -8,6 +8,14 @@ import { useOnboarding } from "@/lib/onboarding-context";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 
+type PendingInvitation = {
+  id: string;
+  inviteeEmail: string;
+  role: "LEADER" | "MEMBER";
+  createdAt: string;
+  invitee: { name: string | null } | null;
+};
+
 type Member = {
   id: string;
   role: Role;
@@ -54,6 +62,7 @@ export default function MembersPage() {
   const { id: groupId } = useParams<{ id: string }>();
   const [group, setGroup] = useState<Group | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,6 +74,13 @@ export default function MembersPage() {
       if (Array.isArray(groups)) {
         const found = groups.find((g: Group) => g.id === groupId);
         setGroup(found ?? null);
+        // ADMIN/LEADERなら承認待ち招待を取得
+        const myMember = found?.members.find((m: Member) => m.user.id === me?.id);
+        if (myMember && myMember.role !== "MEMBER") {
+          fetch(`/api/groups/${groupId}/invitations`)
+            .then((r) => r.ok ? r.json() : [])
+            .then((data) => setPendingInvitations(Array.isArray(data) ? data : []));
+        }
       }
     }).finally(() => setLoading(false));
   }, [groupId]);
@@ -106,6 +122,36 @@ export default function MembersPage() {
           </Link>
           <h2 className="text-2xl font-bold text-gray-800">メンバー管理</h2>
         </div>
+
+        {/* 承認待ち招待 */}
+        {pendingInvitations.length > 0 && (
+          <section className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-amber-700 flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-5 h-5 bg-amber-400 text-white text-[10px] font-bold rounded-full">{pendingInvitations.length}</span>
+              承認待ちの招待
+            </h3>
+            <ul className="space-y-1.5">
+              {pendingInvitations.map((inv) => (
+                <li key={inv.id} className="bg-white border border-amber-100 rounded-lg px-4 py-2.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">
+                      {inv.invitee?.name ?? inv.inviteeEmail}
+                    </p>
+                    {inv.invitee?.name && (
+                      <p className="text-xs text-gray-400 truncate">{inv.inviteeEmail}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_BADGE[inv.role]}`}>
+                      {ROLE_LABEL[inv.role]}
+                    </span>
+                    <span className="text-xs text-amber-500 font-medium">招待中</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <ul className="space-y-2">
           {sorted.map((m) => (
