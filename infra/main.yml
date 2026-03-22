@@ -43,6 +43,28 @@ Resources:
             Prefix: "tmp/"
             ExpirationInDays: 1
 
+  # ─── IAM (S3アクセス + SSM Session Manager用) ───────────────
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "group-point-ec2-role-${Env}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
   # ─── EC2 ──────────────────────────────────────────────────────
   AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -67,6 +89,7 @@ Resources:
     Properties:
       InstanceType: t3.medium
       ImageId: !Ref AmiId
+      IamInstanceProfile: !Ref EC2InstanceProfile
       SecurityGroupIds:
         - !GetAtt AppSecurityGroup.GroupId
       BlockDeviceMappings:
