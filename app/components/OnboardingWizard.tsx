@@ -276,7 +276,7 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
               <h2 className="text-xl font-bold text-slate-800">グループを作成しましょう</h2>
               <p className="text-sm text-slate-600">
                 グループはコミュニティの単位です。チーム名や組織名を入力してください。
-                作成者は<strong>ADMIN（管理者）</strong>になり、メンバーの招待やポイント発行ができます。
+                作成者は<strong>管理者</strong>になり、メンバーの招待やポイント発行ができます。
               </p>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">グループ名</label>
@@ -313,7 +313,7 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
             <>
               <h2 className="text-xl font-bold text-slate-800">ポイントを発行しましょう</h2>
               <p className="text-sm text-slate-600">
-                ADMINはグループポイントを発行できます。発行したポイントはクエストの報酬として使われます。
+                管理者はグループポイントを発行できます。発行したポイントはクエストの報酬として使われます。
                 メンバーがクエストを達成すると、このポイントがメンバーに配布されます。
               </p>
               <div className="bg-indigo-50 rounded-xl p-4 space-y-1">
@@ -412,7 +412,7 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
                 <p className="text-xs font-semibold text-slate-700">ロールの種類</p>
                 <div className="space-y-1 text-xs text-slate-600">
                   <div className="flex gap-2">
-                    <span className="font-bold text-violet-600 w-16 shrink-0">ADMIN</span>
+                    <span className="font-bold text-violet-600 w-16 shrink-0">管理者</span>
                     <span>グループ作成者。全ての設定・招待・削除が可能</span>
                   </div>
                   <div className="flex gap-2">
