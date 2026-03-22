@@ -205,10 +205,7 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
                 <li>ボーナスルールで早期完了を促す</li>
                 <li>分析ページで貢献度を可視化する</li>
               </ul>
-              <p className="text-xs text-slate-400">
-                ここで作成したデータは本番データとして保存されます。
-              </p>
-              <button
+<button
                 onClick={next}
                 className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl font-medium hover:from-indigo-500 hover:to-violet-500 transition"
               >
