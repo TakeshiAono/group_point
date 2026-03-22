@@ -1,16 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { s3, BUCKET } from "@/lib/s3";
 import { GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const key = `avatars/${session.user.id}.jpg`;
+  // userId パラメータがあればそのユーザー、なければ自分
+  const userId = req.nextUrl.searchParams.get("userId") ?? session.user.id;
+  const key = `avatars/${userId}.jpg`;
 
   // ファイルが存在するか確認
   try {
