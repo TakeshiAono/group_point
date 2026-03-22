@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: S3 bucket for group-point user avatars
+Description: group-point infrastructure (S3 + EC2 + PostgreSQL)
 
 Parameters:
   Env:
@@ -9,8 +9,14 @@ Parameters:
   AllowedOrigin:
     Type: String
     Default: "http://localhost:3000"
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: group-point-key
+    Description: EC2キーペア名
 
 Resources:
+
+  # ─── S3 (アバター) ────────────────────────────────────────────
   AvatarsBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -37,6 +43,74 @@ Resources:
             Prefix: "tmp/"
             ExpirationInDays: 1
 
+  # ─── EC2 ──────────────────────────────────────────────────────
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: group-point app server
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+
+  AppServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.micro
+      KeyName: !Ref KeyPairName
+      ImageId: "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
+      SecurityGroupIds:
+        - !GetAtt AppSecurityGroup.GroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+      Tags:
+        - Key: Name
+          Value: !Sub "group-point-${Env}"
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -e
+          dnf update -y
+
+          # Node.js 20
+          dnf install -y nodejs npm git
+
+          # PostgreSQL 15
+          dnf install -y postgresql15-server postgresql15
+          postgresql-setup --initdb
+          systemctl enable postgresql
+          systemctl start postgresql
+
+          # DB・ユーザー作成
+          sudo -u postgres psql -c "CREATE USER grouppoint WITH PASSWORD 'changeme';"
+          sudo -u postgres psql -c "CREATE DATABASE group_point OWNER grouppoint;"
+
+          # pg_hba.conf を md5 認証に変更
+          sed -i 's/^local\s\+all\s\+all\s\+peer/local   all   all   md5/' /var/lib/pgsql/data/pg_hba.conf
+          systemctl restart postgresql
+
+          # PM2
+          npm install -g pm2
+          pm2 startup systemd -u ec2-user --hp /home/ec2-user | tail -1 | bash
+
+          # アプリディレクトリ
+          mkdir -p /home/ec2-user/app
+          chown ec2-user:ec2-user /home/ec2-user/app
+
+          echo "SETUP COMPLETE" > /home/ec2-user/setup.log
+
 Outputs:
   BucketName:
     Value: !Ref AvatarsBucket
@@ -44,3 +118,9 @@ Outputs:
       Name: !Sub "group-point-avatars-bucket-${Env}"
   BucketArn:
     Value: !GetAtt AvatarsBucket.Arn
+  EC2PublicDNS:
+    Value: !GetAtt AppServer.PublicDnsName
+    Description: EC2のパブリックDNS名（アクセスURL）
+  EC2PublicIP:
+    Value: !GetAtt AppServer.PublicIp
+    Description: EC2のパブリックIP
