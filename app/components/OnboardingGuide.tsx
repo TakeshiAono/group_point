@@ -112,7 +112,7 @@ export default function OnboardingGuide() {
 
   if (!ctx || !ctx.step || ctx.step === "welcome") return null;
 
-  const { step, createdGroupId, advance, complete, skip } = ctx;
+  const { step, createdGroupId, advance, back, complete, skip } = ctx;
   const config = STEP_CONFIG[step];
   if (!config) return null;
 
@@ -201,12 +201,23 @@ export default function OnboardingGuide() {
             </p>
           )}
 
-          <button
-            onClick={skip}
-            className="w-full py-1 text-xs text-slate-400 hover:text-slate-600 transition"
-          >
-            ガイドをスキップ
-          </button>
+          <div className="flex items-center justify-between pt-1">
+            <button
+              onClick={back}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              戻る
+            </button>
+            <button
+              onClick={skip}
+              className="text-xs text-slate-400 hover:text-slate-600 transition"
+            >
+              スキップ
+            </button>
+          </div>
         </div>
       </div>
     </div>

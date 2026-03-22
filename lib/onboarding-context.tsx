@@ -21,6 +21,7 @@ type OnboardingContextType = {
   createdGroupId: string | null;
   start: () => void;          // welcome → profile
   advance: () => void;        // 説明ステップ用
+  back: () => void;           // 前のステップへ
   complete: () => Promise<void>;
   skip: () => Promise<void>;
   onGroupCreated: (groupId: string) => void;
@@ -68,6 +69,14 @@ export function OnboardingProvider({
     setStep((cur) => nextStep(cur));
   }, [nextStep]);
 
+  const back = useCallback(() => {
+    setStep((cur) => {
+      const idx = STEP_ORDER.indexOf(cur);
+      if (idx <= 1) return "welcome"; // profile より前には welcome
+      return STEP_ORDER[idx - 1];
+    });
+  }, []);
+
   const markComplete = useCallback(async () => {
     await fetch("/api/me/onboarding", { method: "POST" });
     setStep(null);
@@ -107,6 +116,7 @@ export function OnboardingProvider({
       createdGroupId,
       start,
       advance,
+      back,
       complete: markComplete,
       skip: markComplete,
       onGroupCreated,
