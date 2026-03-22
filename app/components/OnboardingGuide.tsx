@@ -214,7 +214,7 @@ export default function OnboardingGuide() {
             </button>
           )}
 
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center pt-1">
             <button
               onClick={back}
               className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition"
@@ -223,12 +223,6 @@ export default function OnboardingGuide() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               戻る
-            </button>
-            <button
-              onClick={skip}
-              className="text-xs text-slate-400 hover:text-slate-600 transition"
-            >
-              スキップ
             </button>
           </div>
         </div>
