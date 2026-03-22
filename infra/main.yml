@@ -9,10 +9,10 @@ Parameters:
   AllowedOrigin:
     Type: String
     Default: "http://localhost:3000"
-  KeyPairName:
-    Type: AWS::EC2::KeyPair::KeyName
-    Default: group-point-key
-    Description: EC2キーペア名
+  AmiId:
+    Type: String
+    Default: ami-088b486f20fab3f0e
+    Description: Amazon Linux 2023 kernel-6.1 AMI (ap-northeast-1, x86_64)
 
 Resources:
 
@@ -65,9 +65,8 @@ Resources:
   AppServer:
     Type: AWS::EC2::Instance
     Properties:
-      InstanceType: t3.micro
-      KeyName: !Ref KeyPairName
-      ImageId: "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
+      InstanceType: t3.medium
+      ImageId: !Ref AmiId
       SecurityGroupIds:
         - !GetAtt AppSecurityGroup.GroupId
       BlockDeviceMappings:
@@ -114,8 +113,6 @@ Resources:
 Outputs:
   BucketName:
     Value: !Ref AvatarsBucket
-    Export:
-      Name: !Sub "group-point-avatars-bucket-${Env}"
   BucketArn:
     Value: !GetAtt AvatarsBucket.Arn
   EC2PublicDNS:
