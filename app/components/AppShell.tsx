@@ -10,7 +10,7 @@ import { OnboardingProvider, type OnboardingStep } from "@/lib/onboarding-contex
 import { logout } from "@/app/actions/auth";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [me, setMe] = useState<{ id: string; name: string | null; onboardingCompleted: boolean } | null>(null);
   const [initialStep, setInitialStep] = useState<OnboardingStep | undefined>(undefined);
 
@@ -35,10 +35,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen flex flex-col bg-slate-50">
         {/* ヘッダー */}
         <header className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 z-10 shrink-0 shadow-lg">
-          <div className="px-4 py-3 flex items-center gap-4">
+          <div className="px-4 py-3 flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen((prev) => !prev)}
-              className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition"
+              className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition shrink-0"
               aria-label="サイドバーを切り替え"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -46,12 +46,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </svg>
             </button>
 
-            <Link href="/" className="text-lg font-bold text-white mr-auto tracking-wide flex items-center gap-2">
+            <Link href="/" className="text-lg font-bold text-white mr-auto tracking-wide flex items-center gap-2 shrink-0">
               <span className="text-2xl">⬡</span>
-              Group Point
+              <span className="hidden sm:inline">Group Point</span>
             </Link>
 
-            <nav className="flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-1">
               {[
                 { href: "/quests", label: "案件一覧" },
                 { href: "/subquests", label: "サブクエスト" },
@@ -65,21 +65,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   {label}
                 </Link>
               ))}
-              <Link
-                href="/profile"
-                className="flex items-center gap-2 text-sm text-white/80 hover:text-white hover:bg-white/10 px-3 py-1.5 rounded-lg transition"
-              >
-                {me && <UserAvatar userId={me.id} name={me.name} size="sm" />}
-                <span>プロフィール</span>
-              </Link>
             </nav>
+
+            <Link
+              href="/profile"
+              className="flex items-center gap-2 text-sm text-white/80 hover:text-white hover:bg-white/10 px-2 md:px-3 py-1.5 rounded-lg transition"
+            >
+              {me && <UserAvatar userId={me.id} name={me.name} size="sm" />}
+              <span className="hidden sm:inline">プロフィール</span>
+            </Link>
 
             <form action={logout}>
               <button
                 type="submit"
-                className="text-sm px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition"
+                className="text-sm px-3 md:px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 transition"
               >
-                ログアウト
+                <span className="hidden sm:inline">ログアウト</span>
+                <span className="sm:hidden text-xs">出る</span>
               </button>
             </form>
           </div>
@@ -87,7 +89,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* サイドバー＋メインコンテンツ */}
         <div className="flex flex-1 overflow-hidden">
-          {sidebarOpen && <Sidebar />}
+          {/* モバイルオーバーレイ */}
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-30 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <main className="flex-1 overflow-y-auto">
             {children}
           </main>
