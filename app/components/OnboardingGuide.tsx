@@ -142,18 +142,18 @@ export default function OnboardingGuide() {
 
           <p className="text-xs text-slate-600 leading-relaxed">{config.description}</p>
 
-          {/* 対象ページのURL */}
+          {/* このステップの画面へ移動 */}
           {config.navigatePath && (() => {
             const path = config.navigatePath(createdGroupId);
             return path ? (
               <button
                 onClick={() => router.push(path)}
-                className="flex items-center gap-1.5 w-full text-left px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg transition group"
+                className="flex items-center justify-center gap-1.5 w-full px-3 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg transition text-xs text-indigo-600 hover:text-indigo-800 font-medium"
               >
-                <svg className="w-3 h-3 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-                <span className="text-xs text-indigo-600 group-hover:text-indigo-800 truncate font-mono">{path}</span>
+                このステップの画面へ
               </button>
             ) : null;
           })()}
