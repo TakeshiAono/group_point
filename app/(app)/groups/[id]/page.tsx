@@ -953,6 +953,8 @@ function GroupSettingsSection({
   proposalReward: number;
   onProposalRewardUpdated: (v: number) => void;
 }) {
+  const onboarding = useOnboarding();
+
   return (
     <section className="bg-white border border-slate-100 rounded-2xl p-6 space-y-5 shadow-sm">
       <h3 className="font-bold text-slate-700 flex items-center gap-2">
@@ -966,11 +968,16 @@ function GroupSettingsSection({
         description="提案が承認されたときに提案者へ付与する一律ポイント"
         canEdit={canEdit}
         displayValue={`${proposalReward} pt`}
+        onboardingHighlight={onboarding?.step === "bonus"}
         editForm={(onClose) => (
           <ProposalRewardForm
             groupId={groupId}
             current={proposalReward}
-            onSaved={(v) => { onProposalRewardUpdated(v); onClose(); }}
+            onSaved={(v) => {
+              onProposalRewardUpdated(v);
+              onClose();
+              if (onboarding?.step === "bonus") onboarding.advance();
+            }}
             onCancel={onClose}
           />
         )}
@@ -987,12 +994,14 @@ function SettingRow({
   canEdit,
   displayValue,
   editForm,
+  onboardingHighlight,
 }: {
   label: string;
   description: string;
   canEdit: boolean;
   displayValue: string;
   editForm: (onClose: () => void) => React.ReactNode;
+  onboardingHighlight?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -1008,7 +1017,7 @@ function SettingRow({
           {canEdit && !editing && (
             <button
               onClick={() => setEditing(true)}
-              className="text-xs text-indigo-500 hover:text-indigo-700 transition border border-indigo-200 rounded-lg px-2.5 py-0.5 hover:bg-indigo-50"
+              className={`text-xs text-indigo-500 hover:text-indigo-700 transition border border-indigo-200 rounded-lg px-2.5 py-0.5 hover:bg-indigo-50${onboardingHighlight ? " onboarding-highlight" : ""}`}
             >
               変更
             </button>

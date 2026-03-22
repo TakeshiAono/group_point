@@ -78,12 +78,11 @@ const STEP_CONFIG: Partial<Record<NonNullable<OnboardingStep>, StepConfig>> = {
     navigatePath: (gid) => (gid ? `/groups/${gid}/members` : null),
   },
   bonus: {
-    emoji: "🎯",
-    title: "ボーナスルール",
+    emoji: "🎁",
+    title: "提案報酬を設定しましょう",
     description:
-      "クエストにボーナスルールを設定すると、早期完了で報酬アップ・遅延でペナルティを自動計算できます。クエスト詳細ページの「ボーナスルール」セクションから設定できます。",
-    isExplanation: true,
-    actionLabel: "次へ",
+      "グループ設定の「クエスト提案報酬」にある「変更」ボタンをクリックして、メンバーがクエストを提案・承認されたときに付与するポイントを設定してください。",
+    isAction: true,
     navigatePath: (gid) => (gid ? `/groups/${gid}` : null),
   },
   analytics: {
