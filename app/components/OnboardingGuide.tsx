@@ -38,10 +38,22 @@ const STEP_CONFIG: Partial<Record<NonNullable<OnboardingStep>, StepConfig>> = {
     isAction: true,
     navigatePath: (gid) => gid ? `/groups/${gid}` : null,
   },
+  "reclaim-points": {
+    emoji: "♻️",
+    title: "流通中ポイントと未流通ポイント",
+    description:
+      "発行したポイントは「流通中」と「未流通」に分かれます。\n\n" +
+      "・流通中：メンバーが保有しているポイント＋進行中クエストに割り当て済みのポイント\n" +
+      "・未流通：発行済みだがまだ誰にも渡っていないポイント\n\n" +
+      "回収できるのは未流通分のみです。クエストの報酬として割り当てることで流通中になります。",
+    isExplanation: true,
+    actionLabel: "クエストを作成する",
+    navigatePath: (gid) => gid ? `/groups/${gid}/quests` : null,
+  },
   "create-quest": {
     emoji: "📋",
     title: "クエストを作成しましょう",
-    description: "クエストはメンバーへの依頼です。「クエストを作成」ボタンをクリックして作成してください。",
+    description: "クエストはメンバーへの依頼です。「+ 発行」ボタンをクリックして作成してください。",
     isAction: true,
     navigatePath: (gid) => gid ? `/groups/${gid}/quests` : null,
   },
@@ -86,6 +98,7 @@ const STEP_ORDER: NonNullable<OnboardingStep>[] = [
   "profile",
   "create-group",
   "issue-points",
+  "reclaim-points",
   "create-quest",
   "quest-proposals",
   "invite",
@@ -140,7 +153,7 @@ export default function OnboardingGuide() {
             </div>
           </div>
 
-          <p className="text-xs text-slate-600 leading-relaxed">{config.description}</p>
+          <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">{config.description}</p>
 
           {/* このステップの画面へ移動 */}
           {config.navigatePath && (() => {

@@ -8,6 +8,7 @@ export type OnboardingStep =
   | "profile"
   | "create-group"
   | "issue-points"
+  | "reclaim-points"
   | "create-quest"
   | "quest-proposals"
   | "invite"
@@ -36,6 +37,7 @@ const STEP_ORDER: OnboardingStep[] = [
   "profile",
   "create-group",
   "issue-points",
+  "reclaim-points",
   "create-quest",
   "quest-proposals",
   "invite",
@@ -88,10 +90,8 @@ export function OnboardingProvider({
   }, []);
 
   const onPointsIssued = useCallback(() => {
-    setStep("create-quest");
-    const gid = groupIdRef.current;
-    if (gid) router.push(`/groups/${gid}/quests`);
-  }, [router]);
+    setStep("reclaim-points");
+  }, []);
 
   const onQuestCreated = useCallback(() => {
     setStep("quest-proposals");
