@@ -97,7 +97,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-6 py-10">
+    <div className="max-w-lg mx-auto px-4 md:px-6 py-6 md:py-10">
       <h2 className="text-2xl font-bold text-gray-800 mb-8">プロフィール編集</h2>
 
       {/* アイコン */}

@@ -86,7 +86,7 @@ export default function QuestsPage() {
 
   return (
     <div>
-      <main className="max-w-4xl mx-auto px-6 py-10 space-y-6">
+      <main className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-10 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="text-2xl font-bold text-gray-800">クエスト一覧</h2>
           <div className="flex flex-wrap gap-2">

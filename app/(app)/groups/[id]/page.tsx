@@ -212,7 +212,7 @@ export default function GroupDetailPage() {
 
   return (
     <div>
-      <main className="max-w-4xl mx-auto px-6 py-10 space-y-6">
+      <main className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-10 space-y-6">
         {/* グループヘッダー */}
         <section className="relative bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 rounded-2xl p-6 shadow-xl overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4 pointer-events-none" />
@@ -261,7 +261,7 @@ export default function GroupDetailPage() {
 
         {/* 自分の情報 ＋ クエスト提案 2列 */}
         {myMember && (
-        <div className="grid grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
           <section className="bg-white border border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm hover:shadow-md transition">
             <h3 className="font-bold text-slate-700 flex items-center gap-2">
               <span className="w-1.5 h-5 bg-gradient-to-b from-indigo-500 to-violet-600 rounded-full inline-block" />
@@ -276,7 +276,7 @@ export default function GroupDetailPage() {
               {displayedQuests.length === 0 && displayedSubQuests.length === 0 ? (
                 <p className="text-sm text-gray-400">進行中の案件・サブクエストはありません</p>
               ) : (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* 左：受注中クエスト */}
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-gray-500 mb-2">受注中の案件</p>
@@ -680,7 +680,7 @@ function IssuedPointsEditor({
       </div>
 
       {isAdmin && (
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
           <DeltaForm
             label="追加発行"
             buttonLabel="発行する"

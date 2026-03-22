@@ -99,7 +99,7 @@ export default function MembersPage() {
 
   return (
     <div>
-      <main className="max-w-4xl mx-auto px-6 py-10 space-y-6">
+      <main className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-10 space-y-6">
         <div className="flex items-center gap-3">
           <Link href={`/groups/${groupId}`} className="text-sm text-gray-400 hover:text-gray-600 transition">
             ← {group.name}
@@ -153,17 +153,17 @@ function MemberRow({
   }
 
   return (
-    <li className={`rounded-lg px-5 py-3 flex items-center justify-between border ${isMe ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200"}`}>
-      <div className="flex items-center gap-2">
+    <li className={`rounded-lg px-4 md:px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border ${isMe ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200"}`}>
+      <div className="flex items-center gap-2 flex-wrap">
         <UserAvatar userId={member.user.id} name={member.user.name} />
         <span className="text-sm font-medium text-gray-800">{member.user.name ?? member.user.email}</span>
-        {member.user.name && <span className="text-xs text-gray-400">{member.user.email}</span>}
+        {member.user.name && <span className="text-xs text-gray-400 hidden sm:inline">{member.user.email}</span>}
         <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${ROLE_BADGE[member.role]}`}>
           {ROLE_LABEL[member.role]}
         </span>
         {isMe && <span className="text-xs text-indigo-500 font-medium">あなた</span>}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 pl-8 sm:pl-0">
         <span className="text-sm text-gray-600">{formatPoint(member.memberPoints, pointGroup)}</span>
         {deletable && (
           <button
@@ -212,7 +212,7 @@ function InviteForm({ groupId, availableRoles }: { groupId: string; availableRol
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5">
       <p className="text-sm font-medium text-gray-700 mb-3">メンバーを招待</p>
-      <form onSubmit={handleSubmit} className="flex gap-3">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
         <input
           type="email"
           value={email}

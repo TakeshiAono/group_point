@@ -8,7 +8,7 @@ import { useOnboarding } from "@/lib/onboarding-context";
 type Member = { id: string; memberPoints: number; user: { id: string } };
 type Group = { id: string; name: string; members: Member[] };
 
-export default function Sidebar() {
+export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -44,6 +44,7 @@ export default function Sidebar() {
       setGroups((prev) => [data, ...prev]);
       setNewGroupName("");
       setShowModal(false);
+      onClose();
       if (onboarding?.step === "create-group") {
         onboarding.onGroupCreated(data.id);
       } else {
@@ -55,7 +56,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-60 shrink-0 bg-slate-900 flex flex-col shadow-xl">
+    <aside className={`w-60 shrink-0 bg-slate-900 flex flex-col shadow-xl fixed md:relative inset-y-0 left-0 z-40 transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
       <div className="px-3 py-4 border-b border-slate-700">
         <button
           onClick={() => setShowModal(true)}
