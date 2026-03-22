@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { useOnboarding } from "@/lib/onboarding-context";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 
@@ -476,6 +477,7 @@ function IssuedPointsEditor({
   onSettingsUpdated: (s: Partial<Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit" | "displayMultiplier">>) => void;
 }) {
   const reclaimable = totalIssuedPoints - totalCirculating;
+  const onboarding = useOnboarding();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pointUnit, setPointUnit] = useState(group.pointUnit);
   const [laborCost, setLaborCost] = useState(group.laborCostPerHour);
@@ -500,6 +502,9 @@ function IssuedPointsEditor({
       }
       onUpdated(data.totalIssuedPoints);
       setAmount(0);
+      if (onboarding?.step === "issue-points" && delta > 0) {
+        onboarding.onPointsIssued();
+      }
     } finally {
       setSaving(false);
     }
@@ -885,6 +890,7 @@ function DeltaForm({
   onSubmit: (delta: number, amount: number, setError: (e: string) => void, setSaving: (b: boolean) => void, setAmount: (v: number) => void) => void;
   group: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit" | "displayMultiplier">;
 }) {
+  const onboarding = useOnboarding();
   const [amount, setAmount] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -920,7 +926,7 @@ function DeltaForm({
         <button
           type="submit"
           disabled={saving || (maxPt !== undefined && maxPt <= 0)}
-          className={`px-4 py-2 text-white text-sm rounded-lg disabled:opacity-50 transition shadow ${buttonClass}`}
+          className={`px-4 py-2 text-white text-sm rounded-lg disabled:opacity-50 transition shadow ${buttonClass}${onboarding?.step === "issue-points" && sign === 1 ? " onboarding-highlight" : ""}`}
         >
           {saving ? "..." : buttonLabel}
         </button>

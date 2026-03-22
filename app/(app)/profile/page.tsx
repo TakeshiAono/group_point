@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useOnboarding } from "@/lib/onboarding-context";
 
 export default function ProfilePage() {
+  const onboarding = useOnboarding();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -88,6 +90,7 @@ export default function ProfilePage() {
       setSuccess("プロフィールを更新しました");
       setCurrentPassword("");
       setNewPassword("");
+      if (onboarding?.step === "profile") onboarding.onProfileSaved();
     } finally {
       setSaving(false);
     }
@@ -193,7 +196,7 @@ export default function ProfilePage() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+          className={`w-full py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition${onboarding?.step === "profile" ? " onboarding-highlight" : ""}`}
         >
           {saving ? "保存中..." : "保存する"}
         </button>

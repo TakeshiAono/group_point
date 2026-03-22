@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import UserAvatar from "@/app/components/UserAvatar";
+import { useOnboarding } from "@/lib/onboarding-context";
 
 type Role = "ADMIN" | "LEADER" | "MEMBER";
 
@@ -176,6 +177,7 @@ function MemberRow({
 }
 
 function InviteForm({ groupId, availableRoles }: { groupId: string; availableRoles: ("LEADER" | "MEMBER")[] }) {
+  const onboarding = useOnboarding();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"LEADER" | "MEMBER">(availableRoles[0]);
   const [submitting, setSubmitting] = useState(false);
@@ -195,6 +197,7 @@ function InviteForm({ groupId, availableRoles }: { groupId: string; availableRol
       if (!res.ok) { setError(data.error ?? "エラーが発生しました"); return; }
       setSuccess(`${data.invitee.name ?? data.invitee.email} に招待を送りました`);
       setEmail("");
+      if (onboarding?.step === "invite") onboarding.onInviteSent();
     } finally {
       setSubmitting(false);
     }
@@ -225,7 +228,7 @@ function InviteForm({ groupId, availableRoles }: { groupId: string; availableRol
         <button
           type="submit"
           disabled={submitting}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+          className={`px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition${onboarding?.step === "invite" ? " onboarding-highlight" : ""}`}
         >
           {submitting ? "送信中..." : "招待を送る"}
         </button>

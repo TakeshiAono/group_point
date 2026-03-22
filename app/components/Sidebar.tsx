@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useOnboarding } from "@/lib/onboarding-context";
 
 type Member = { id: string; memberPoints: number; user: { id: string } };
 type Group = { id: string; name: string; members: Member[] };
@@ -16,6 +17,7 @@ export default function Sidebar() {
   const [error, setError] = useState("");
   const pathname = usePathname();
   const router = useRouter();
+  const onboarding = useOnboarding();
 
   useEffect(() => {
     Promise.all([
@@ -42,7 +44,11 @@ export default function Sidebar() {
       setGroups((prev) => [data, ...prev]);
       setNewGroupName("");
       setShowModal(false);
-      router.push(`/groups/${data.id}`);
+      if (onboarding?.step === "create-group") {
+        onboarding.onGroupCreated(data.id);
+      } else {
+        router.push(`/groups/${data.id}`);
+      }
     } finally {
       setCreating(false);
     }
@@ -53,7 +59,7 @@ export default function Sidebar() {
       <div className="px-3 py-4 border-b border-slate-700">
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-medium hover:from-indigo-500 hover:to-violet-500 transition shadow"
+          className={`flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-medium hover:from-indigo-500 hover:to-violet-500 transition shadow${onboarding?.step === "create-group" ? " onboarding-highlight" : ""}`}
         >
           <span className="text-lg leading-none">+</span>
           グループを作成
