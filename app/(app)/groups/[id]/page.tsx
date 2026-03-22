@@ -954,6 +954,7 @@ function GroupSettingsSection({
   onProposalRewardUpdated: (v: number) => void;
 }) {
   const onboarding = useOnboarding();
+  const router = useRouter();
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -985,7 +986,10 @@ function GroupSettingsSection({
             onSaved={(v) => {
               onProposalRewardUpdated(v);
               onClose();
-              if (onboarding?.step === "bonus") onboarding.advance();
+              if (onboarding?.step === "bonus") {
+                onboarding.advance();
+                router.push(`/groups/${groupId}/analytics`);
+              }
             }}
             onCancel={onClose}
           />
