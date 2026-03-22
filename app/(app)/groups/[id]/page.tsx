@@ -141,6 +141,7 @@ const ROLE_BADGE: Record<Role, string> = {
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const onboarding = useOnboarding();
   const [group, setGroup] = useState<Group | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [quests, setQuests] = useState<Quest[]>([]);
@@ -355,7 +356,8 @@ export default function GroupDetailPage() {
             </Link>
             <Link
               href={`/groups/${id}/quests`}
-              className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm"
+              onClick={() => { if (onboarding?.step === "create-quest") onboarding.onQuestCreated(); }}
+              className={`flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm${onboarding?.step === "create-quest" ? " onboarding-highlight" : ""}`}
             >
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-lg shadow shrink-0">
                 ⚔️

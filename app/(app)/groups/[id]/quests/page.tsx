@@ -120,7 +120,7 @@ export default function QuestsPage() {
             {myMember && (
               <button
                 onClick={() => setShowForm(true)}
-                className={`px-3 py-1.5 bg-blue-600 text-white text-xs rounded-full hover:bg-blue-700 transition${onboarding?.step === "create-quest" ? " onboarding-highlight" : ""}`}
+                className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-full hover:bg-blue-700 transition"
               >
                 + 発行
               </button>

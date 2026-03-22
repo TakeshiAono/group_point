@@ -47,15 +47,15 @@ const STEP_CONFIG: Partial<Record<NonNullable<OnboardingStep>, StepConfig>> = {
       "・未流通：発行済みだがまだ誰にも渡っていないポイント\n\n" +
       "回収できるのは未流通分のみです。クエストの報酬として割り当てることで流通中になります。",
     isExplanation: true,
-    actionLabel: "クエストを作成する",
-    navigatePath: (gid) => gid ? `/groups/${gid}/quests` : null,
+    actionLabel: "グループトップへ",
+    navigatePath: (gid) => gid ? `/groups/${gid}` : null,
   },
   "create-quest": {
     emoji: "📋",
-    title: "クエストを作成しましょう",
-    description: "クエストはメンバーへの依頼です。「+ 発行」ボタンをクリックして作成してください。",
+    title: "クエスト一覧へ移動しましょう",
+    description: "グループトップの「クエスト」カードをクリックしてクエスト一覧ページへ移動してください。",
     isAction: true,
-    navigatePath: (gid) => gid ? `/groups/${gid}/quests` : null,
+    navigatePath: (gid) => gid ? `/groups/${gid}` : null,
   },
   "quest-proposals": {
     emoji: "💡",
