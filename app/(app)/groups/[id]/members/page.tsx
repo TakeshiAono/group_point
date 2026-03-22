@@ -243,38 +243,58 @@ function InviteForm({ groupId, availableRoles }: { groupId: string; availableRol
       {success && <p className="mt-2 text-sm text-green-600">{success}</p>}
 
       {/* CSV一括招待 */}
-      <CsvInviteSection groupId={groupId} role={role} />
+      <CsvInviteSection groupId={groupId} role={role} availableRoles={availableRoles} />
     </div>
   );
 }
 
-function CsvInviteSection({ groupId, role }: { groupId: string; role: "LEADER" | "MEMBER" }) {
+type CsvEntry = { email: string; role: "LEADER" | "MEMBER" };
+type SendResult = { email: string; ok: boolean; message: string };
+
+function CsvInviteSection({ groupId, role: defaultRole, availableRoles }: { groupId: string; role: "LEADER" | "MEMBER"; availableRoles: ("LEADER" | "MEMBER")[] }) {
   const [open, setOpen] = useState(false);
+  const [preview, setPreview] = useState<CsvEntry[]>([]);
   const [sending, setSending] = useState(false);
-  const [results, setResults] = useState<{ email: string; ok: boolean; message: string }[]>([]);
+  const [results, setResults] = useState<SendResult[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const emails = text
+        .split(/[\r\n,;]+/)
+        .map((s) => s.trim().replace(/^["']|["']$/g, ""))
+        .filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s));
+      if (emails.length === 0) {
+        setResults([{ email: "", ok: false, message: "有効なメールアドレスが見つかりませんでした" }]);
+        return;
+      }
+      // 重複除去してプレビューへ
+      const unique = [...new Set(emails)];
+      setPreview(unique.map((email) => ({ email, role: defaultRole })));
+      setResults([]);
+    };
+    reader.readAsText(file);
+    if (fileRef.current) fileRef.current.value = "";
+  }
 
-    const text = await file.text();
-    // 改行・カンマ区切りで全トークンを取り出しメールアドレスだけ抽出
-    const emails = text
-      .split(/[\r\n,;]+/)
-      .map((s) => s.trim().replace(/^["']|["']$/g, ""))
-      .filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s));
+  function updateRole(index: number, role: "LEADER" | "MEMBER") {
+    setPreview((prev) => prev.map((e, i) => i === index ? { ...e, role } : e));
+  }
 
-    if (emails.length === 0) {
-      setResults([{ email: "", ok: false, message: "有効なメールアドレスが見つかりませんでした" }]);
-      return;
-    }
+  function removeEntry(index: number) {
+    setPreview((prev) => prev.filter((_, i) => i !== index));
+  }
 
+  async function handleSend() {
+    if (preview.length === 0) return;
     setSending(true);
     setResults([]);
-    const newResults: typeof results = [];
-
-    for (const email of emails) {
+    const newResults: SendResult[] = [];
+    for (const { email, role } of preview) {
       const res = await fetch(`/api/groups/${groupId}/invitations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -289,10 +309,9 @@ function CsvInviteSection({ groupId, role }: { groupId: string; role: "LEADER" |
           : data.error ?? "エラー",
       });
     }
-
     setResults(newResults);
+    setPreview([]);
     setSending(false);
-    if (fileRef.current) fileRef.current.value = "";
   }
 
   const successCount = results.filter((r) => r.ok).length;
@@ -314,24 +333,64 @@ function CsvInviteSection({ groupId, role }: { groupId: string; role: "LEADER" |
       {open && (
         <div className="mt-3 space-y-3">
           <p className="text-xs text-gray-500">
-            メールアドレスを1行1件またはカンマ区切りで記載したCSVファイルを選択してください。
+            メールアドレスを1行1件またはカンマ区切りで記載したCSVファイルを選択してください。取り込み後にロールを変更できます。
           </p>
-          <label className={`flex items-center gap-2 w-fit px-4 py-2 rounded-lg border text-sm cursor-pointer transition ${sending ? "opacity-50 pointer-events-none" : "border-indigo-300 text-indigo-600 hover:bg-indigo-50"}`}>
+          <label className="flex items-center gap-2 w-fit px-4 py-2 rounded-lg border border-indigo-300 text-indigo-600 hover:bg-indigo-50 text-sm cursor-pointer transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
-            {sending ? "送信中..." : "CSVファイルを選択"}
-            <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={handleFile} disabled={sending} />
+            CSVファイルを選択
+            <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={handleFile} />
           </label>
 
+          {/* プレビューリスト */}
+          {preview.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-600">{preview.length}件 — ロールを確認して送信してください</p>
+              <ul className="max-h-52 overflow-y-auto space-y-1.5">
+                {preview.map((entry, i) => (
+                  <li key={i} className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-1.5">
+                    <span className="text-xs text-gray-700 flex-1 truncate">{entry.email}</span>
+                    {availableRoles.length > 1 ? (
+                      <select
+                        value={entry.role}
+                        onChange={(e) => updateRole(i, e.target.value as "LEADER" | "MEMBER")}
+                        className="text-xs border border-gray-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      >
+                        <option value="MEMBER">メンバー</option>
+                        <option value="LEADER">管理側</option>
+                      </select>
+                    ) : (
+                      <span className="text-xs text-gray-400">{entry.role === "LEADER" ? "管理側" : "メンバー"}</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeEntry(i)}
+                      className="text-gray-300 hover:text-red-400 transition text-xs shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={sending}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg disabled:opacity-50 transition"
+              >
+                {sending ? "送信中..." : `${preview.length}件に招待を送る`}
+              </button>
+            </div>
+          )}
+
+          {/* 送信結果 */}
           {results.length > 0 && (
             <div className="space-y-1.5">
-              {(successCount > 0 || failCount > 0) && (
-                <p className="text-xs font-medium text-gray-600">
-                  結果: <span className="text-green-600">{successCount}件成功</span>
-                  {failCount > 0 && <span className="text-red-500 ml-2">{failCount}件失敗</span>}
-                </p>
-              )}
+              <p className="text-xs font-medium text-gray-600">
+                結果: <span className="text-green-600">{successCount}件成功</span>
+                {failCount > 0 && <span className="text-red-500 ml-2">{failCount}件失敗</span>}
+              </p>
               <ul className="max-h-40 overflow-y-auto space-y-1">
                 {results.map((r, i) => (
                   <li key={i} className={`text-xs px-3 py-1.5 rounded-lg flex items-center gap-2 ${r.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
