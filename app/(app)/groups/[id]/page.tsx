@@ -342,6 +342,24 @@ export default function GroupDetailPage() {
 
           <div className="space-y-3">
             <Link
+              href={`/groups/${id}/members`}
+              className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm"
+            >
+              <div className="relative shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-lg shadow">
+                  👥
+                </div>
+                <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 bg-indigo-500 text-white text-[10px] font-bold rounded-full shadow">
+                  {group.members.length}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-800 text-sm">メンバー</p>
+                <p className="text-xs text-slate-400 mt-0.5">メンバー一覧・招待・管理</p>
+              </div>
+              <span className="text-slate-300 text-lg">→</span>
+            </Link>
+            <Link
               href={`/groups/${id}/quest-proposals`}
               className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-5 py-4 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm"
             >
@@ -404,23 +422,6 @@ export default function GroupDetailPage() {
           />
         )}
 
-        {/* メンバー管理ページへのリンク */}
-        <Link
-          href={`/groups/${id}/members`}
-          className="flex items-center gap-4 bg-white border border-slate-100 rounded-2xl px-6 py-5 hover:shadow-md hover:-translate-y-0.5 transition-all shadow-sm"
-        >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-lg shadow shrink-0">
-            👥
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-slate-800">メンバー</p>
-            <p className="text-xs text-slate-400 mt-0.5">メンバー一覧・招待・管理</p>
-          </div>
-          <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">
-            {group.members.length}
-          </span>
-          <span className="text-slate-300 text-lg">→</span>
-        </Link>
       </main>
 
       {/* 削除確認ダイアログ（1回目） */}
