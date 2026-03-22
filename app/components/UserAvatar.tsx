@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchAvatarUrl } from "@/lib/avatarCache";
 
 type Props = {
   userId: string | undefined;
@@ -12,11 +13,9 @@ export default function UserAvatar({ userId, name, size = "sm" }: Props) {
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    setUrl(null);
     if (!userId) return;
-    fetch(`/api/avatar/download-url?userId=${userId}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d?.url) setUrl(d.url); })
-      .catch(() => {});
+    fetchAvatarUrl(userId).then((u) => setUrl(u));
   }, [userId]);
 
   const sizeClass = size === "md" ? "w-10 h-10 text-base" : "w-7 h-7 text-xs";

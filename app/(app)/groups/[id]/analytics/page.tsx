@@ -372,6 +372,7 @@ function AnalysisSection({
   memberIdToUserId: Record<string, string>;
 }) {
   const [topN, setTopN] = useState<"all" | 3 | 5 | 10>("all");
+  const [hoveredLine, setHoveredLine] = useState<string | null>(null);
   const limit = topN === "all" ? pieData.length : topN;
   const topSlice = pieData.slice(0, limit);
   const selfInTop = !myMemberId || topSlice.some((e) => e.id === myMemberId);
@@ -481,6 +482,7 @@ function AnalysisSection({
                   lineMembers={displayedLineMembers}
                   memberIdToUserId={memberIdToUserId}
                   colors={MEMBER_COLORS}
+                  hoveredLine={hoveredLine}
                 />
               } />
               {granularity === "week" && displayedLineRows
@@ -501,7 +503,10 @@ function AnalysisSection({
                     stroke={MEMBER_COLORS[i % MEMBER_COLORS.length]}
                     strokeWidth={isMe ? 3 : 1.5}
                     dot={isMe ? { r: 3 } : false}
-                    strokeOpacity={isMe ? 1 : 0.45} />
+                    strokeOpacity={hoveredLine && hoveredLine !== mp.name ? 0.1 : (isMe ? 1 : 0.45)}
+                    onMouseEnter={() => setHoveredLine(mp.name)}
+                    onMouseLeave={() => setHoveredLine(null)}
+                  />
                 );
               })}
             </LineChart>
@@ -510,9 +515,17 @@ function AnalysisSection({
           <ul className="flex flex-wrap gap-x-4 gap-y-1.5 justify-center pt-1">
             {displayedLineMembers.map((mp, i) => {
               const isMe = mp.memberId === myMemberId;
+              const isHovered = hoveredLine === mp.name;
               const userId = memberIdToUserId[mp.memberId];
               return (
-                <li key={mp.memberId} className={`flex items-center gap-1.5 text-xs ${isMe ? "font-bold" : "text-gray-600"}`}>
+                <li
+                  key={mp.memberId}
+                  className={`flex items-center gap-1.5 text-xs cursor-pointer transition-opacity ${
+                    hoveredLine && !isHovered ? "opacity-30" : ""
+                  } ${isMe || isHovered ? "font-bold" : "text-gray-600"}`}
+                  onMouseEnter={() => setHoveredLine(mp.name)}
+                  onMouseLeave={() => setHoveredLine(null)}
+                >
                   <span className="inline-block w-3 h-0.5 shrink-0 rounded" style={{ backgroundColor: MEMBER_COLORS[i % MEMBER_COLORS.length] }} />
                   <UserAvatar userId={userId} name={mp.name} size="sm" />
                   <span>{mp.name}</span>
@@ -570,7 +583,7 @@ function CustomPieTooltip({
 
 function CustomLineTooltip({
   active, payload, label,
-  formatValue, lineMembers, memberIdToUserId, colors,
+  formatValue, lineMembers, memberIdToUserId, colors, hoveredLine,
 }: {
   active?: boolean;
   payload?: { name: string; value: number; color: string }[];
@@ -579,13 +592,17 @@ function CustomLineTooltip({
   lineMembers: LineMember[];
   memberIdToUserId: Record<string, string>;
   colors: string[];
+  hoveredLine: string | null;
 }) {
   if (!active || !payload?.length) return null;
+  const filtered = hoveredLine
+    ? payload.filter((p) => p.name === hoveredLine)
+    : [payload.reduce((max, p) => p.value > max.value ? p : max, payload[0])];
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 space-y-2 text-sm">
       <p className="text-xs text-gray-400 font-medium">{label}</p>
-      {payload.map((entry, i) => {
+      {filtered.map((entry, i) => {
         const member = lineMembers.find((m) => m.name === entry.name);
         const userId = member ? memberIdToUserId[member.memberId] : undefined;
         return (
