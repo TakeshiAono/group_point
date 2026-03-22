@@ -206,15 +206,19 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
                 Group Point へようこそ！
               </h2>
               <p className="text-slate-600 text-sm leading-relaxed">
-                このウィザードでは、グループの作成からポイント発行・クエスト管理まで、
-                実際に操作しながら基本的な使い方をご案内します。
+                組織やコミュニティが活発になるためには、一人ひとりが<strong>能動的に動く仕組み</strong>が必要です。
+                Group Point は、貢献に対してポイントで報いることで<strong>インセンティブを見える化</strong>し、
+                メンバーが自発的に動きたくなるコミュニティをつくるためのツールです。
               </p>
-              <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
-                <li>グループを作成してメンバーを招待する</li>
-                <li>ポイントを発行してクエストに報酬を設定する</li>
-                <li>ボーナスルールで早期完了を促す</li>
-                <li>分析ページで貢献度を可視化する</li>
-              </ul>
+              <div className="bg-indigo-50 rounded-xl p-4 space-y-2">
+                <p className="text-xs font-semibold text-indigo-700">このウィザードでできること</p>
+                <ul className="text-xs text-indigo-600 space-y-1 list-disc list-inside">
+                  <li>グループを作成してメンバーを招待する</li>
+                  <li>ポイントを発行してクエストに報酬を設定する</li>
+                  <li>ボーナスルールで早期完了を促す</li>
+                  <li>分析ページで貢献度を可視化する</li>
+                </ul>
+              </div>
 <div className="flex flex-col gap-2">
                 <button
                   onClick={next}
