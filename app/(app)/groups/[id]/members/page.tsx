@@ -195,7 +195,10 @@ function InviteForm({ groupId, availableRoles }: { groupId: string; availableRol
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "エラーが発生しました"); return; }
-      setSuccess(`${data.invitee.name ?? data.invitee.email} に招待を送りました`);
+      const displayName = data.inviteeName ?? data.inviteeEmail ?? email;
+      setSuccess(data.isNewUser
+        ? `${displayName} に招待メールを送りました（アカウント未登録）`
+        : `${displayName} に招待を送りました`);
       setEmail("");
       if (onboarding?.step === "invite") onboarding.onInviteSent();
     } finally {

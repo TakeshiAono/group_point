@@ -518,6 +518,14 @@ export type IntFieldUpdateOperationsInput = {
   divide?: number
 }
 
+export type FloatFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type GroupCreateNestedOneWithoutMembersInput = {
   create?: Prisma.XOR<Prisma.GroupCreateWithoutMembersInput, Prisma.GroupUncheckedCreateWithoutMembersInput>
   connectOrCreate?: Prisma.GroupCreateOrConnectWithoutMembersInput
@@ -582,6 +590,7 @@ export type GroupCreateWithoutMembersInput = {
   laborCostPerHour?: number
   timeUnit?: string
   proposalReward?: number
+  displayMultiplier?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   quests?: Prisma.QuestCreateNestedManyWithoutGroupInput
@@ -597,6 +606,7 @@ export type GroupUncheckedCreateWithoutMembersInput = {
   laborCostPerHour?: number
   timeUnit?: string
   proposalReward?: number
+  displayMultiplier?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   quests?: Prisma.QuestUncheckedCreateNestedManyWithoutGroupInput
@@ -628,6 +638,7 @@ export type GroupUpdateWithoutMembersInput = {
   laborCostPerHour?: Prisma.IntFieldUpdateOperationsInput | number
   timeUnit?: Prisma.StringFieldUpdateOperationsInput | string
   proposalReward?: Prisma.IntFieldUpdateOperationsInput | number
+  displayMultiplier?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   quests?: Prisma.QuestUpdateManyWithoutGroupNestedInput
@@ -643,6 +654,7 @@ export type GroupUncheckedUpdateWithoutMembersInput = {
   laborCostPerHour?: Prisma.IntFieldUpdateOperationsInput | number
   timeUnit?: Prisma.StringFieldUpdateOperationsInput | string
   proposalReward?: Prisma.IntFieldUpdateOperationsInput | number
+  displayMultiplier?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   quests?: Prisma.QuestUncheckedUpdateManyWithoutGroupNestedInput
@@ -658,6 +670,7 @@ export type GroupCreateWithoutQuestsInput = {
   laborCostPerHour?: number
   timeUnit?: string
   proposalReward?: number
+  displayMultiplier?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.GroupMemberCreateNestedManyWithoutGroupInput
@@ -673,6 +686,7 @@ export type GroupUncheckedCreateWithoutQuestsInput = {
   laborCostPerHour?: number
   timeUnit?: string
   proposalReward?: number
+  displayMultiplier?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutGroupInput
@@ -704,6 +718,7 @@ export type GroupUpdateWithoutQuestsInput = {
   laborCostPerHour?: Prisma.IntFieldUpdateOperationsInput | number
   timeUnit?: Prisma.StringFieldUpdateOperationsInput | string
   proposalReward?: Prisma.IntFieldUpdateOperationsInput | number
+  displayMultiplier?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.GroupMemberUpdateManyWithoutGroupNestedInput
@@ -719,6 +734,7 @@ export type GroupUncheckedUpdateWithoutQuestsInput = {
   laborCostPerHour?: Prisma.IntFieldUpdateOperationsInput | number
   timeUnit?: Prisma.StringFieldUpdateOperationsInput | string
   proposalReward?: Prisma.IntFieldUpdateOperationsInput | number
+  displayMultiplier?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.GroupMemberUncheckedUpdateManyWithoutGroupNestedInput
@@ -734,6 +750,7 @@ export type GroupCreateWithoutQuestProposalsInput = {
   laborCostPerHour?: number
   timeUnit?: string
   proposalReward?: number
+  displayMultiplier?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.GroupMemberCreateNestedManyWithoutGroupInput
@@ -749,6 +766,7 @@ export type GroupUncheckedCreateWithoutQuestProposalsInput = {
   laborCostPerHour?: number
   timeUnit?: string
   proposalReward?: number
+  displayMultiplier?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutGroupInput
@@ -780,6 +798,7 @@ export type GroupUpdateWithoutQuestProposalsInput = {
   laborCostPerHour?: Prisma.IntFieldUpdateOperationsInput | number
   timeUnit?: Prisma.StringFieldUpdateOperationsInput | string
   proposalReward?: Prisma.IntFieldUpdateOperationsInput | number
+  displayMultiplier?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.GroupMemberUpdateManyWithoutGroupNestedInput
@@ -795,6 +814,7 @@ export type GroupUncheckedUpdateWithoutQuestProposalsInput = {
   laborCostPerHour?: Prisma.IntFieldUpdateOperationsInput | number
   timeUnit?: Prisma.StringFieldUpdateOperationsInput | string
   proposalReward?: Prisma.IntFieldUpdateOperationsInput | number
+  displayMultiplier?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.GroupMemberUncheckedUpdateManyWithoutGroupNestedInput
@@ -810,6 +830,7 @@ export type GroupCreateWithoutInvitationsInput = {
   laborCostPerHour?: number
   timeUnit?: string
   proposalReward?: number
+  displayMultiplier?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.GroupMemberCreateNestedManyWithoutGroupInput
@@ -825,6 +846,7 @@ export type GroupUncheckedCreateWithoutInvitationsInput = {
   laborCostPerHour?: number
   timeUnit?: string
   proposalReward?: number
+  displayMultiplier?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.GroupMemberUncheckedCreateNestedManyWithoutGroupInput
@@ -856,6 +878,7 @@ export type GroupUpdateWithoutInvitationsInput = {
   laborCostPerHour?: Prisma.IntFieldUpdateOperationsInput | number
   timeUnit?: Prisma.StringFieldUpdateOperationsInput | string
   proposalReward?: Prisma.IntFieldUpdateOperationsInput | number
+  displayMultiplier?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.GroupMemberUpdateManyWithoutGroupNestedInput
@@ -871,6 +894,7 @@ export type GroupUncheckedUpdateWithoutInvitationsInput = {
   laborCostPerHour?: Prisma.IntFieldUpdateOperationsInput | number
   timeUnit?: Prisma.StringFieldUpdateOperationsInput | string
   proposalReward?: Prisma.IntFieldUpdateOperationsInput | number
+  displayMultiplier?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.GroupMemberUncheckedUpdateManyWithoutGroupNestedInput
