@@ -416,6 +416,9 @@ export default function GroupDetailPage() {
             <p className="font-semibold text-slate-800">メンバー</p>
             <p className="text-xs text-slate-400 mt-0.5">メンバー一覧・招待・管理</p>
           </div>
+          <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">
+            {group.members.length}
+          </span>
           <span className="text-slate-300 text-lg">→</span>
         </Link>
       </main>
