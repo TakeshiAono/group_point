@@ -116,6 +116,7 @@ export default function MembersPage() {
               deletable={canDelete(m)}
               onRemoved={removeMember}
               pointGroup={group}
+              isMe={m.user.id === myUserId}
             />
           ))}
         </ul>
@@ -129,13 +130,14 @@ export default function MembersPage() {
 }
 
 function MemberRow({
-  member, groupId, deletable, onRemoved, pointGroup,
+  member, groupId, deletable, onRemoved, pointGroup, isMe,
 }: {
   member: Member;
   groupId: string;
   deletable: boolean;
   onRemoved: (id: string) => void;
   pointGroup: Pick<Group, "pointUnit" | "laborCostPerHour" | "timeUnit">;
+  isMe?: boolean;
 }) {
   const [removing, setRemoving] = useState(false);
 
@@ -151,7 +153,7 @@ function MemberRow({
   }
 
   return (
-    <li className="bg-white border border-gray-200 rounded-lg px-5 py-3 flex items-center justify-between">
+    <li className={`rounded-lg px-5 py-3 flex items-center justify-between border ${isMe ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200"}`}>
       <div className="flex items-center gap-2">
         <UserAvatar userId={member.user.id} name={member.user.name} />
         <span className="text-sm font-medium text-gray-800">{member.user.name ?? member.user.email}</span>
@@ -159,6 +161,7 @@ function MemberRow({
         <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${ROLE_BADGE[member.role]}`}>
           {ROLE_LABEL[member.role]}
         </span>
+        {isMe && <span className="text-xs text-indigo-500 font-medium">あなた</span>}
       </div>
       <div className="flex items-center gap-3">
         <span className="text-sm text-gray-600">{formatPoint(member.memberPoints, pointGroup)}</span>
