@@ -412,23 +412,38 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
                 グループのメンバーページから招待を送ることができます。
                 招待されたユーザーは承認・拒否を選べます。
               </p>
-              <div className="bg-slate-50 rounded-xl p-4 space-y-2">
-                <p className="text-xs font-semibold text-slate-700">ロールの種類</p>
-                <div className="space-y-1 text-xs text-slate-600">
-                  <div className="flex gap-2">
-                    <span className="font-bold text-violet-600 w-16 shrink-0">管理者</span>
-                    <span>グループ作成者。全ての設定・招待・削除が可能</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="font-bold text-indigo-600 w-20 shrink-0">マネージャー</span>
-                    <span>管理グループ関係者。メンバーの招待・クエスト管理が可能</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="font-bold text-slate-600 w-20 shrink-0">メンバー</span>
-                    <span>一般メンバー。クエスト受注・提案が可能</span>
-                  </div>
-                </div>
-              </div>
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100">
+                    <th className="text-left px-3 py-2 rounded-tl-lg font-semibold text-slate-600">ロール</th>
+                    <th className="text-left px-3 py-2 font-semibold text-slate-600">権限</th>
+                    <th className="text-left px-3 py-2 rounded-tr-lg font-semibold text-slate-600">招待可否</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  <tr>
+                    <td className="px-3 py-2">
+                      <span className="font-bold text-violet-600">管理者</span>
+                    </td>
+                    <td className="px-3 py-2 text-slate-600">全設定・ポイント発行・メンバー削除</td>
+                    <td className="px-3 py-2 text-slate-600">全ロールを招待可</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">
+                      <span className="font-bold text-indigo-600">マネージャー</span>
+                    </td>
+                    <td className="px-3 py-2 text-slate-600">クエスト管理・提案承認</td>
+                    <td className="px-3 py-2 text-slate-600">メンバーのみ招待可</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2">
+                      <span className="font-bold text-slate-500">メンバー</span>
+                    </td>
+                    <td className="px-3 py-2 text-slate-600">クエスト受注・提案</td>
+                    <td className="px-3 py-2 text-slate-600">招待不可</td>
+                  </tr>
+                </tbody>
+              </table>
               <button
                 onClick={next}
                 className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl font-medium hover:from-indigo-500 hover:to-violet-500 transition"
