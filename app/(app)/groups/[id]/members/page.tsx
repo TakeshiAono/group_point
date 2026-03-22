@@ -344,6 +344,14 @@ function CsvInviteSection({ groupId, role: defaultRole, availableRoles }: { grou
           <p className="text-xs text-gray-500">
             メールアドレスを1行1件またはカンマ区切りで記載したCSVファイルを選択してください。取り込み後にロールを変更できます。
           </p>
+          {/* サンプル表示 */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 space-y-1">
+            <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">CSVの例</p>
+            <pre className="text-xs text-slate-600 leading-relaxed">{`tanaka@example.com\nsuzuki@example.com\nwatanabe@example.com`}</pre>
+            <p className="text-[10px] text-slate-400">カンマ区切り（1行に複数）も可：<span className="font-mono">a@example.com,b@example.com</span></p>
+          </div>
+          <p className="text-xs text-gray-500 hidden">
+          </p>
           <label className="flex items-center gap-2 w-fit px-4 py-2 rounded-lg border border-indigo-300 text-indigo-600 hover:bg-indigo-50 text-sm cursor-pointer transition">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
