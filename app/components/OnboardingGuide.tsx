@@ -84,6 +84,7 @@ const STEP_CONFIG: Partial<Record<NonNullable<OnboardingStep>, StepConfig>> = {
       "クエストにボーナスルールを設定すると、早期完了で報酬アップ・遅延でペナルティを自動計算できます。クエスト詳細ページの「ボーナスルール」セクションから設定できます。",
     isExplanation: true,
     actionLabel: "次へ",
+    navigatePath: (gid) => (gid ? `/groups/${gid}` : null),
   },
   analytics: {
     emoji: "📊",
