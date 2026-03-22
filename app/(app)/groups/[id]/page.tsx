@@ -126,9 +126,9 @@ const SUB_STATUS_COLOR: Record<SubQuest["status"], string> = {
 };
 
 const ROLE_LABEL: Record<Role, string> = {
-  ADMIN: "管理人",
-  LEADER: "管理側メンバー",
-  MEMBER: "一般メンバー",
+  ADMIN: "管理者",
+  LEADER: "マネージャー",
+  MEMBER: "メンバー",
 };
 
 const ROLE_BADGE: Record<Role, string> = {

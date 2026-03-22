@@ -420,11 +420,11 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
                     <span>グループ作成者。全ての設定・招待・削除が可能</span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="font-bold text-indigo-600 w-16 shrink-0">LEADER</span>
-                    <span>政府関係者。メンバーの招待・クエスト管理が可能</span>
+                    <span className="font-bold text-indigo-600 w-20 shrink-0">マネージャー</span>
+                    <span>管理グループ関係者。メンバーの招待・クエスト管理が可能</span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="font-bold text-slate-600 w-16 shrink-0">MEMBER</span>
+                    <span className="font-bold text-slate-600 w-20 shrink-0">メンバー</span>
                     <span>一般メンバー。クエスト受注・提案が可能</span>
                   </div>
                 </div>
