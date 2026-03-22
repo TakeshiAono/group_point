@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -954,9 +954,18 @@ function GroupSettingsSection({
   onProposalRewardUpdated: (v: number) => void;
 }) {
   const onboarding = useOnboarding();
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (onboarding?.step === "bonus") {
+      setTimeout(() => {
+        sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 300);
+    }
+  }, [onboarding?.step]);
 
   return (
-    <section className="bg-white border border-slate-100 rounded-2xl p-6 space-y-5 shadow-sm">
+    <section ref={sectionRef} className="bg-white border border-slate-100 rounded-2xl p-6 space-y-5 shadow-sm">
       <h3 className="font-bold text-slate-700 flex items-center gap-2">
         <span className="w-1.5 h-5 bg-gradient-to-b from-amber-400 to-orange-500 rounded-full inline-block" />
         グループ設定
