@@ -108,7 +108,9 @@ export function OnboardingProvider({
 
   const onInviteSent = useCallback(() => {
     setStep("bonus");
-  }, []);
+    const gid = groupIdRef.current;
+    if (gid) router.push(`/groups/${gid}`);
+  }, [router]);
 
   return (
     <OnboardingContext.Provider value={{

@@ -127,9 +127,13 @@ export default function OnboardingGuide() {
     if (step === "analytics") {
       await complete();
     } else {
+      const nextStepKey = STEP_ORDER[STEP_ORDER.indexOf(step) + 1] as NonNullable<OnboardingStep> | undefined;
+      const nextConfig = nextStepKey ? STEP_CONFIG[nextStepKey] : undefined;
       advance();
-      if (config?.navigatePath) {
-        const path = config.navigatePath(createdGroupId);
+      // 次ステップのパスがあればそちらへ、なければ現在のパスを使う
+      const navConfig = nextConfig?.navigatePath ? nextConfig : config;
+      if (navConfig?.navigatePath) {
+        const path = navConfig.navigatePath(createdGroupId);
         if (path) router.push(path);
       }
     }
