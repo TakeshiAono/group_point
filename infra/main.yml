@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: S3 bucket for group-point user avatars
+
+Parameters:
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+  AllowedOrigin:
+    Type: String
+    Default: "http://localhost:3000"
+
+Resources:
+  AvatarsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "group-point-avatars-${Env}-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - !Ref AllowedOrigin
+            AllowedMethods:
+              - GET
+              - PUT
+            AllowedHeaders:
+              - "*"
+            MaxAge: 3600
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteTempUploads
+            Status: Enabled
+            Prefix: "tmp/"
+            ExpirationInDays: 1
+
+Outputs:
+  BucketName:
+    Value: !Ref AvatarsBucket
+    Export:
+      Name: !Sub "group-point-avatars-bucket-${Env}"
+  BucketArn:
+    Value: !GetAtt AvatarsBucket.Arn
