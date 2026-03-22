@@ -2,6 +2,30 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
+// グループ削除（ADMINのみ）
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+  }
+
+  const { id: groupId } = await params;
+
+  const operator = await prisma.groupMember.findUnique({
+    where: { userId_groupId: { userId: session.user.id, groupId } },
+  });
+  if (!operator || operator.role !== "ADMIN") {
+    return NextResponse.json({ error: "グループ削除はADMINのみ実行できます" }, { status: 403 });
+  }
+
+  await prisma.group.delete({ where: { id: groupId } });
+
+  return NextResponse.json({ ok: true });
+}
+
 // 管理側発行済みポイントを加減算（ADMINのみ）
 // delta > 0: 追加発行
 // delta < 0: 回収（流通中のポイントは回収不可）

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
@@ -139,10 +139,13 @@ const ROLE_BADGE: Record<Role, string> = {
 
 export default function GroupDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [group, setGroup] = useState<Group | null>(null);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [subQuests, setSubQuests] = useState<SubQuest[]>([]);
+  const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -172,6 +175,17 @@ export default function GroupDetailPage() {
 
   const myMember = group.members.find((m) => m.user.id === myUserId);
   const myRole = myMember?.role ?? "MEMBER";
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/groups/${id}`, { method: "DELETE" });
+      if (res.ok) router.push("/groups");
+    } finally {
+      setDeleting(false);
+      setDeleteStep(0);
+    }
+  }
 
   // 受注中のクエスト（自分がcompleter）
   const myAcceptedQuests = myMember
@@ -210,9 +224,17 @@ export default function GroupDetailPage() {
                 </span>
               )}
             </div>
+            {myRole === "ADMIN" && (
+              <button
+                onClick={() => setDeleteStep(1)}
+                className="ml-auto text-sm px-4 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-200 rounded-lg border border-red-400/30 transition"
+              >
+                グループを削除
+              </button>
+            )}
             <Link
               href={`/groups/${id}/analytics`}
-              className="ml-auto text-sm px-5 py-2 bg-white/15 hover:bg-white/25 text-white rounded-lg border border-white/20 transition flex items-center gap-2"
+              className={`${myRole === "ADMIN" ? "" : "ml-auto"} text-sm px-5 py-2 bg-white/15 hover:bg-white/25 text-white rounded-lg border border-white/20 transition flex items-center gap-2`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -394,6 +416,44 @@ export default function GroupDetailPage() {
           <span className="text-slate-300 text-lg">→</span>
         </Link>
       </main>
+
+      {/* 削除確認ダイアログ（1回目） */}
+      {deleteStep === 1 && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl space-y-4">
+            <h3 className="text-lg font-bold text-gray-800">グループを削除しますか？</h3>
+            <p className="text-sm text-gray-600">
+              「<strong>{group.name}</strong>」を削除します。クエスト・メンバー・ポイント履歴など関連するすべてのデータが削除されます。
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setDeleteStep(0)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition">キャンセル</button>
+              <button onClick={() => setDeleteStep(2)} className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition">次へ</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 削除確認ダイアログ（2回目） */}
+      {deleteStep === 2 && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl space-y-4">
+            <h3 className="text-lg font-bold text-red-600">本当に削除しますか？</h3>
+            <p className="text-sm text-gray-600">
+              この操作は<strong>取り消せません</strong>。「<strong>{group.name}</strong>」と関連するすべてのデータが完全に削除されます。
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setDeleteStep(0)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition">キャンセル</button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition"
+              >
+                {deleting ? "削除中..." : "完全に削除する"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
