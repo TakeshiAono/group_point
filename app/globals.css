@@ -26,15 +26,17 @@ body {
 }
 
 @keyframes onboarding-ring {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
-  50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.9); }
+  50% { box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
 }
 
 .onboarding-highlight {
-  animation: onboarding-ring 1.2s ease-in-out infinite;
-  outline: 2px solid #6366f1;
+  animation: onboarding-ring 1s ease-in-out infinite;
+  outline: 3px solid #eab308;
   outline-offset: 3px;
   border-radius: 8px;
   position: relative;
   z-index: 1;
+  background-color: #eab308 !important;
+  color: #000 !important;
 }
