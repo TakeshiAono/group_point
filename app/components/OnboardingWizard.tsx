@@ -166,6 +166,16 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
     }
   }
 
+  async function skipOnboarding() {
+    setLoading(true);
+    try {
+      await fetch("/api/me/onboarding", { method: "POST" });
+      onComplete();
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
@@ -205,12 +215,21 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
                 <li>ボーナスルールで早期完了を促す</li>
                 <li>分析ページで貢献度を可視化する</li>
               </ul>
-<button
-                onClick={next}
-                className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl font-medium hover:from-indigo-500 hover:to-violet-500 transition"
-              >
-                はじめる
-              </button>
+<div className="flex flex-col gap-2">
+                <button
+                  onClick={next}
+                  className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl font-medium hover:from-indigo-500 hover:to-violet-500 transition"
+                >
+                  はじめる
+                </button>
+                <button
+                  onClick={skipOnboarding}
+                  disabled={loading}
+                  className="w-full py-2 text-sm text-slate-400 hover:text-slate-600 transition disabled:opacity-50"
+                >
+                  スキップして後で確認する
+                </button>
+              </div>
             </>
           )}
 
